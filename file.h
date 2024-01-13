@@ -2,26 +2,23 @@
 #define _2CKSTUB_FILE_H_
 
 #include <Windows.h>
+#include "buf.h"
 
-class FileBuf {
+typedef class _FileBuf : public LocalBuf {
 private:
-	HANDLE fileHandle;
-	LPVOID fileBuffer;
-	DWORD fileSize;
 	DWORD lastError;
-
 	BOOL _isLoadFile;
+protected:
+	HANDLE fileHandle;
 public:
-	BOOL openFile(CHAR* targetFilePath);
-	BOOL openFile(WCHAR* targetFilePath);
-	LPVOID getBufAddr();
-	DWORD getBufSize();
-	DWORD getLastError();
-	HANDLE getFileHandle();
-	VOID close();
+	BOOL OpenFile(CHAR* targetFilePath);
+	BOOL OpenFile(WCHAR* targetFilePath);
+	DWORD GetLastError();
+	HANDLE GetFileHandle();
+	VOID CloseFile();
 
-	~FileBuf();
-	FileBuf();
-};
+	~_FileBuf();
+	_FileBuf();
+} FileBuf;
 
 #endif

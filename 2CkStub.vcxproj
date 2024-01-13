@@ -147,11 +147,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="buf.cpp" />
     <ClCompile Include="file.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pe.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="buf.h" />
     <ClInclude Include="file.h" />
     <ClInclude Include="pe.h" />
   </ItemGroup>

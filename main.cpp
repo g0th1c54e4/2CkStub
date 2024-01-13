@@ -19,14 +19,14 @@ int main() {
 	cin.getline(targetFilePath, sizeof(targetFilePath));
 
 
-	PeFile curFile;
-	if (curFile.init(targetFilePath) == FALSE) {
+	PeFile targetFile;
+	if (targetFile.Init(targetFilePath) == FALSE) {
 		cout << "[-] 打开PE文件失败或文件非PE文件。" << endl;
 		return 0;
 	}
-	
 
 
+	targetFile.ClosePeFile();
 	return 0;
 	
 }

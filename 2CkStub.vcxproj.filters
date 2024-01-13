@@ -2,11 +2,36 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="pe.cpp" />
-    <ClCompile Include="file.cpp" />
+    <ClCompile Include="file.cpp">
+      <Filter>file</Filter>
+    </ClCompile>
+    <ClCompile Include="pe.cpp">
+      <Filter>pe</Filter>
+    </ClCompile>
+    <ClCompile Include="buf.cpp">
+      <Filter>buf</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="pe.h" />
-    <ClInclude Include="file.h" />
+    <ClInclude Include="file.h">
+      <Filter>file</Filter>
+    </ClInclude>
+    <ClInclude Include="pe.h">
+      <Filter>pe</Filter>
+    </ClInclude>
+    <ClInclude Include="buf.h">
+      <Filter>buf</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="file">
+      <UniqueIdentifier>{73dd9225-0a5d-4935-9b94-15648beef78f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pe">
+      <UniqueIdentifier>{a9867171-6492-4ee2-aa25-397c9d07fbb8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="buf">
+      <UniqueIdentifier>{c2bc43d4-41a6-4e48-a62b-431d8ff70f2e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
