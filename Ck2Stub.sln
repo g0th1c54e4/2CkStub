@@ -3,7 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.7.34221.43
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "2CkStub", "2CkStub.vcxproj", "{71956EDC-C111-414A-B77B-1CFBB47EECCA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Packer", "2CkStub.vcxproj", "{71956EDC-C111-414A-B77B-1CFBB47EECCA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Stub", "Stub\Stub.vcxproj", "{2CB834C8-D228-43FF-BCFE-227E4AFE9A60}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,14 @@ Global
 		{71956EDC-C111-414A-B77B-1CFBB47EECCA}.Release|x64.Build.0 = Release|x64
 		{71956EDC-C111-414A-B77B-1CFBB47EECCA}.Release|x86.ActiveCfg = Release|Win32
 		{71956EDC-C111-414A-B77B-1CFBB47EECCA}.Release|x86.Build.0 = Release|Win32
+		{2CB834C8-D228-43FF-BCFE-227E4AFE9A60}.Debug|x64.ActiveCfg = Debug|x64
+		{2CB834C8-D228-43FF-BCFE-227E4AFE9A60}.Debug|x64.Build.0 = Debug|x64
+		{2CB834C8-D228-43FF-BCFE-227E4AFE9A60}.Debug|x86.ActiveCfg = Debug|Win32
+		{2CB834C8-D228-43FF-BCFE-227E4AFE9A60}.Debug|x86.Build.0 = Debug|Win32
+		{2CB834C8-D228-43FF-BCFE-227E4AFE9A60}.Release|x64.ActiveCfg = Release|x64
+		{2CB834C8-D228-43FF-BCFE-227E4AFE9A60}.Release|x64.Build.0 = Release|x64
+		{2CB834C8-D228-43FF-BCFE-227E4AFE9A60}.Release|x86.ActiveCfg = Release|Win32
+		{2CB834C8-D228-43FF-BCFE-227E4AFE9A60}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

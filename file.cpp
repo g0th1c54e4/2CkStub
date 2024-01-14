@@ -137,13 +137,6 @@ DWORD _FileBuf::GetLastError(){
 	return lastError;
 }
 
-HANDLE _FileBuf::GetFileHandle(){
-	if (_isLoadFile == FALSE) {
-		return 0;
-	}
-	return fileHandle;
-}
-
 VOID _FileBuf::CloseFile(){
 	if (_isLoadFile == FALSE) {
 		return;
@@ -157,6 +150,63 @@ VOID _FileBuf::CloseFile(){
 		fileHandle = 0;
 	}
 	_isLoadFile = FALSE;
+}
+
+BOOL _FileBuf::Save(){
+	if (_isLoadFile == FALSE) {
+		return FALSE;
+	}
+
+	DWORD dwNumOfRead = 0;
+	if (SetFilePointer(fileHandle, NULL, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+		CloseHandle(fileHandle);
+		return FALSE;
+	}
+	if (WriteFile(fileHandle, this->bufAddr, this->bufSize, &dwNumOfRead, NULL) == FALSE) {
+		CloseHandle(fileHandle);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOL _FileBuf::SaveAs(CHAR* saveFilePath){
+	if (_isLoadFile == FALSE) {
+		return FALSE;
+	}
+	HANDLE hFileHandle = CreateFileA(saveFilePath, GENERIC_READ | GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFileHandle == INVALID_HANDLE_VALUE) {
+		return FALSE;
+	}
+	DWORD dwNumOfRead = 0;
+	if (SetFilePointer(hFileHandle, NULL, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+		CloseHandle(hFileHandle);
+		return FALSE;
+	}
+	if (ReadFile(hFileHandle, this->bufAddr, this->bufSize, &dwNumOfRead, NULL) == FALSE) {
+		CloseHandle(hFileHandle);
+		return FALSE;
+	}
+	return TRUE;
+}
+
+BOOL _FileBuf::SaveAs(WCHAR* saveFilePath){
+	if (_isLoadFile == FALSE) {
+		return FALSE;
+	}
+	HANDLE hFileHandle = CreateFileW(saveFilePath, GENERIC_READ | GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFileHandle == INVALID_HANDLE_VALUE) {
+		return FALSE;
+	}
+	DWORD dwNumOfRead = 0;
+	if (SetFilePointer(hFileHandle, NULL, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) {
+		CloseHandle(hFileHandle);
+		return FALSE;
+	}
+	if (ReadFile(hFileHandle, this->bufAddr, this->bufSize, &dwNumOfRead, NULL) == FALSE) {
+		CloseHandle(hFileHandle);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 _FileBuf::~_FileBuf(){

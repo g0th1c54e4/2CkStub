@@ -16,6 +16,23 @@ BOOL _LocalBuf::CreateBuffer(DWORD dwSize, DWORD dwFlags){
     return TRUE;
 }
 
+BOOL _LocalBuf::CopyBuffer(LPVOID targetBufAddr, DWORD dwTargetBufSize, DWORD dwFlags){
+    if (BufCreated == TRUE) {
+        return FALSE;
+    }
+
+    bufAddr = HeapAlloc(hProcessHeap, dwFlags, dwTargetBufSize);
+    if (bufAddr == NULL) {
+        return FALSE;
+    }
+    RtlCopyMemory(bufAddr, targetBufAddr, dwTargetBufSize);
+    bufSize = dwTargetBufSize;
+    saveFlags = dwFlags;
+
+    BufCreated = TRUE;
+    return TRUE;
+}
+
 BOOL _LocalBuf::FreeBuffer(){
     if (BufCreated == FALSE) {
         return FALSE;
@@ -45,6 +62,14 @@ BOOL _LocalBuf::ReBufferSize(DWORD newSize){
 
     return TRUE;
 }
+
+/*
+VOID _LocalBuf::operator=(_LocalBuf cloneBuf){
+    this->FreeBuffer();
+    this->CreateBuffer(cloneBuf.bufSize, cloneBuf.saveFlags);
+    RtlCopyMemory(this->bufAddr, cloneBuf.bufAddr, cloneBuf.bufSize);
+}
+*/
 
 _LocalBuf::_LocalBuf(){
     BufCreated = FALSE;

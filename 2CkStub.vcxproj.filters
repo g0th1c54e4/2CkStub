@@ -11,6 +11,9 @@
     <ClCompile Include="buf.cpp">
       <Filter>buf</Filter>
     </ClCompile>
+    <ClCompile Include="Packer.cpp">
+      <Filter>Pack</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="file.h">
@@ -22,6 +25,9 @@
     <ClInclude Include="buf.h">
       <Filter>buf</Filter>
     </ClInclude>
+    <ClInclude Include="Packer.h">
+      <Filter>Pack</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="file">
@@ -32,6 +38,9 @@
     </Filter>
     <Filter Include="buf">
       <UniqueIdentifier>{c2bc43d4-41a6-4e48-a62b-431d8ff70f2e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pack">
+      <UniqueIdentifier>{64c2d234-6f99-4d23-894b-d51c9085a288}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

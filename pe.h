@@ -6,7 +6,27 @@
 #include "file.h"
 #include "buf.h"
 
-enum FileBit { Bit32 = 0, Bit64 = 1 };
+enum FileBit { 
+	Bit32 = 0,
+	Bit64 = 1 
+};
+enum DirEntryOrder {
+	Dir_Export = IMAGE_DIRECTORY_ENTRY_EXPORT,
+	Dir_Import = IMAGE_DIRECTORY_ENTRY_IMPORT,
+	Dir_Resource = IMAGE_DIRECTORY_ENTRY_RESOURCE,
+	Dir_Exception = IMAGE_DIRECTORY_ENTRY_EXCEPTION,
+	Dir_Security = IMAGE_DIRECTORY_ENTRY_SECURITY,
+	Dir_BaseReloc = IMAGE_DIRECTORY_ENTRY_BASERELOC,
+	Dir_Debug = IMAGE_DIRECTORY_ENTRY_DEBUG,
+	Dir_Architecture = IMAGE_DIRECTORY_ENTRY_ARCHITECTURE,
+	Dir_GlobalPtr = IMAGE_DIRECTORY_ENTRY_GLOBALPTR,
+	Dir_Tls = IMAGE_DIRECTORY_ENTRY_TLS,
+	Dir_LoadConfig = IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG,
+	Dir_BoundImport = IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT,
+	Dir_Iat = IMAGE_DIRECTORY_ENTRY_IAT,
+	Dir_DelayImport = IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT,
+	Dir_ComDescriptor = IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR
+};
 
 #define IMAGE_FIRST_SECTION32( ntheader ) ((PIMAGE_SECTION_HEADER)        \
     ((ULONG_PTR)(ntheader) +                                            \
@@ -27,12 +47,17 @@ private:
 	BOOL init_checkPeFile();
 	//检测PE文件的运行位数(32、64位)
 	FileBit init_judgeBit();
+	//判断程序是否有合适的空间以插入新的区块项
+	BOOL CheckSecTabSpace(UINT numOfInsertSec = 1);
+	//修改Buffer大小并重置信息
+	VOID ReSize(DWORD newSize);
 
-	LocalBuf memBuf;
-	VOID VirtualLoad(); //将PE文件提升到内存形式
-	VOID VirtualUpdate(); //将内存形式内的全部更改都更新到文件形式的PE文件内
+	//WORD nunOfSec;
 	
 public:
+
+	// 注意，此类不提供针对内存形式的PE文件的存储形式的方法函数。原因在于方便后续Buffer保存到原文件。
+
 	PIMAGE_DOS_HEADER dosHdr;
 	PIMAGE_NT_HEADERS32 ntHdr32;
 	PIMAGE_NT_HEADERS64 ntHdr64;
@@ -44,14 +69,24 @@ public:
 	BOOL Init(WCHAR* targetFilePath);
 	
 	std::vector<PIMAGE_SECTION_HEADER> GetSecHdrList(); //获取区块头数组
+	PIMAGE_SECTION_HEADER GetSecHdrByName(CONST CHAR* sectionName); //根据区块名来获取对应区块头
+	PIMAGE_SECTION_HEADER GetCodeSec(); //获取OEP所在区块对应的区块头
+	PIMAGE_SECTION_HEADER GetRelocSec(); //获取重定位表所在区块对应的区块头
 	
 	DWORD Rva2Foa(DWORD RvaValue); //RVA转换FOA
 	DWORD Foa2Rva(DWORD FoaValue); //FOA转换RVA
+	DWORD AlignFile(DWORD value); //文件对齐
+	DWORD AlignSection(DWORD value); //内存对齐
 
-	//以下为待编写区域
+	DWORD GetExportFuncAddrRVA(CHAR* targetFuncName); //获取导出函数地址(RVA)
 
-	DWORD64 GetExportFuncAddrRVA(); //获取导出函数地址(RVA)
-	DWORD64 GetExportFuncAddrVA(); //获取导出函数地址(VA)
+	PIMAGE_DATA_DIRECTORY GetDirByOrder(DirEntryOrder dirOrder); //获取特定数据目录表
+	VOID RemoveDebugInfo(BOOL removeData = TRUE); //清除调试数据目录表信息(参数removeData表示是否清除数据目录所具体引用的数据)
+	VOID RemoveExportInfo(BOOL removeData = TRUE); //清除导出数据目录表信息(参数removeData表示是否清除数据目录所具体引用的数据)
+
+	VOID DynamicsBaseOff(); //关闭动态基址
+	BOOL AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr, DWORD* newSecReturnFOA); //添加新区块
+	
 
 
 	VOID ClosePeFile();
