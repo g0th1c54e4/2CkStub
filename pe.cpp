@@ -280,44 +280,23 @@ PIMAGE_DATA_DIRECTORY _PeFile::GetDirByOrder(DirEntryOrder dirOrder){
 	return 0;
 }
 
-VOID _PeFile::RemoveDebugInfo(BOOL removeData){
-	//还没有做removeData的功能
-	if (fileBit == Bit32) {
-		if (this->ntHdr32->OptionalHeader.DataDirectory[Dir_Debug].VirtualAddress == 0 || this->ntHdr32->OptionalHeader.DataDirectory[Dir_Debug].Size == 0) {
-			return;
-		}
-		PIMAGE_DEBUG_DIRECTORY pDebug = (PIMAGE_DEBUG_DIRECTORY)((DWORD64)this->bufAddr + Rva2Foa(this->ntHdr32->OptionalHeader.DataDirectory[Dir_Debug].VirtualAddress));
-		DWORD dwDebugDataSize = pDebug->SizeOfData;
-		RtlZeroMemory((LPVOID)((DWORD64)this->bufAddr + pDebug->PointerToRawData), dwDebugDataSize);
-		RtlZeroMemory(pDebug, this->ntHdr32->OptionalHeader.DataDirectory[Dir_Debug].Size);
+VOID _PeFile::RemoveDebugInfo() {
+	PIMAGE_DATA_DIRECTORY dirDebug = GetDirByOrder(Dir_Debug);
+	if (dirDebug->VirtualAddress == 0 || dirDebug->Size == 0) {
+		return;
 	}
-	if (fileBit == Bit64) {
-		if (this->ntHdr64->OptionalHeader.DataDirectory[Dir_Debug].VirtualAddress == 0 || this->ntHdr64->OptionalHeader.DataDirectory[Dir_Debug].Size == 0) {
-			return;
-		}
-		PIMAGE_DEBUG_DIRECTORY pDebug = (PIMAGE_DEBUG_DIRECTORY)((DWORD64)this->bufAddr + Rva2Foa(this->ntHdr64->OptionalHeader.DataDirectory[Dir_Debug].VirtualAddress));
-		DWORD dwDebugDataSize = pDebug->SizeOfData;
-		RtlZeroMemory((LPVOID)((DWORD64)this->bufAddr + pDebug->PointerToRawData), dwDebugDataSize);
-		RtlZeroMemory(pDebug, this->ntHdr64->OptionalHeader.DataDirectory[Dir_Debug].Size);
-	}
+	PIMAGE_DEBUG_DIRECTORY pDebug = (PIMAGE_DEBUG_DIRECTORY)((DWORD64)this->bufAddr + Rva2Foa(dirDebug->VirtualAddress));
+	RtlZeroMemory((LPVOID)((DWORD64)this->bufAddr + pDebug->PointerToRawData), pDebug->SizeOfData);
+	RtlZeroMemory(pDebug, dirDebug->Size);
 }
 
-VOID _PeFile::RemoveExportInfo(BOOL removeData){
-	//还没有做removeData的功能
-	if (fileBit == Bit32) {
-		if (this->ntHdr32->OptionalHeader.DataDirectory[Dir_Export].VirtualAddress == 0 || this->ntHdr32->OptionalHeader.DataDirectory[Dir_Export].Size == 0) {
-			return;
-		}
-		PIMAGE_EXPORT_DIRECTORY pExport = (PIMAGE_EXPORT_DIRECTORY)((DWORD64)this->bufAddr + Rva2Foa(this->ntHdr32->OptionalHeader.DataDirectory[Dir_Export].VirtualAddress));
-		RtlZeroMemory(pExport, this->ntHdr32->OptionalHeader.DataDirectory[Dir_Export].Size);
+VOID _PeFile::RemoveExportInfo(){
+	PIMAGE_DATA_DIRECTORY dirExport = GetDirByOrder(Dir_Export);
+	if (dirExport->VirtualAddress == 0 || dirExport->Size == 0) {
+		return;
 	}
-	if (fileBit == Bit64) {
-		if (this->ntHdr64->OptionalHeader.DataDirectory[Dir_Export].VirtualAddress == 0 || this->ntHdr64->OptionalHeader.DataDirectory[Dir_Export].Size == 0) {
-			return;
-		}
-		PIMAGE_EXPORT_DIRECTORY pExport = (PIMAGE_EXPORT_DIRECTORY)((DWORD64)this->bufAddr + Rva2Foa(this->ntHdr64->OptionalHeader.DataDirectory[Dir_Export].VirtualAddress));
-		RtlZeroMemory(pExport, this->ntHdr64->OptionalHeader.DataDirectory[Dir_Export].Size);
-	}
+	PIMAGE_EXPORT_DIRECTORY pExport = (PIMAGE_EXPORT_DIRECTORY)((DWORD64)this->bufAddr + Rva2Foa(dirExport->VirtualAddress));
+	RtlZeroMemory(pExport, dirExport->Size);
 }
 
 VOID _PeFile::DynamicsBaseOff(){
@@ -385,7 +364,9 @@ BOOL _PeFile::AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecA
 	}
 	addData.FreeBuffer();
 
-	//TODO：如果数据目录的某一项的RVA指向了附加数据，那么这个RVA需要更新，目前还没有加入更新的代码
+	if (GetDirByOrder(Dir_Security)->VirtualAddress == sec.PointerToRawData) {
+		GetDirByOrder(Dir_Security)->VirtualAddress = sec.PointerToRawData + sec.SizeOfRawData;
+	}
 
 	RtlCopyMemory(newSecReturnHdr, &sec, sizeof(IMAGE_SECTION_HEADER));
 	*newSecReturnFOA = sec.PointerToRawData;

@@ -26,7 +26,6 @@ namespace Ck2Stub {
 
 		//此处不应该分别设置32位和64位的处理
 
-
 		if (targetFile.GetDirByOrder(Dir_ComDescriptor)->VirtualAddress != 0) {
 			cout << "[-] 此程序为.net程序。" << endl;
 			targetFile.ClosePeFile();
@@ -39,6 +38,7 @@ namespace Ck2Stub {
 			stubFile.ClosePeFile();
 			return FALSE;
 		}
+		
 		if (targetFile.GetDirByOrder(Dir_LoadConfig)->VirtualAddress != 0) { //关闭SafeSEH保护为后续LVMProtectA的开发作基础
 			PIMAGE_DATA_DIRECTORY loadConfigDir = targetFile.GetDirByOrder(Dir_LoadConfig);
 			LPVOID loadConfigMemAddr = (LPVOID)((DWORD64)targetFile.bufAddr + targetFile.Rva2Foa(loadConfigDir->VirtualAddress));
@@ -72,7 +72,7 @@ namespace Ck2Stub {
 		IatPack(&targetFile, &stubFile);
 		cout << "[+] 已处理IAT表信息。" << endl;
 
-		targetFile.SetOep(newCodeSec.VirtualAddress + targetFile.Foa2Rva(stubOepSecOffset));
+		targetFile.SetOep(newCodeSec.VirtualAddress + stubOepSecOffset);
 
 		if (targetFile.SaveAs(saveFilePath) == FALSE) {
 			targetFile.ClosePeFile();
@@ -88,11 +88,11 @@ namespace Ck2Stub {
 	}
 
 	VOID TlsPack(PeFile* targetFile, PeFile* stubFile){
-		return VOID();
+		
 	}
 
 	VOID IatPack(PeFile* targetFile, PeFile* stubFile){
-		return VOID();
+		
 	}
 
 	VOID RelocPack(PeFile* targetFile, PeFile* stubFile){

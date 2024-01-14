@@ -81,8 +81,8 @@ public:
 	DWORD GetExportFuncAddrRVA(CHAR* targetFuncName); //获取导出函数地址(RVA)
 
 	PIMAGE_DATA_DIRECTORY GetDirByOrder(DirEntryOrder dirOrder); //获取特定数据目录表
-	VOID RemoveDebugInfo(BOOL removeData = TRUE); //清除调试数据目录表信息(参数removeData表示是否清除数据目录所具体引用的数据)
-	VOID RemoveExportInfo(BOOL removeData = TRUE); //清除导出数据目录表信息(参数removeData表示是否清除数据目录所具体引用的数据)
+	VOID RemoveDebugInfo(); //清除调试数据目录表信息(参数removeData表示是否清除数据目录所具体引用的数据)
+	VOID RemoveExportInfo(); //清除导出数据目录表信息(参数removeData表示是否清除数据目录所具体引用的数据)
 
 	VOID DynamicsBaseOff(); //关闭动态基址
 	BOOL AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr, DWORD* newSecReturnFOA); //添加新区块
