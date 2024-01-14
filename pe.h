@@ -87,7 +87,9 @@ public:
 	VOID DynamicsBaseOff(); //关闭动态基址
 	BOOL AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr, DWORD* newSecReturnFOA); //添加新区块
 	
+	VOID SetOep(DWORD oepValue); //设置新的OEP入口点
 
+	DWORD64 GetImageBase(); //获取映像基址 (32位下请自行将返回值强制转换成DWORD型)
 
 	VOID ClosePeFile();
 	_PeFile();

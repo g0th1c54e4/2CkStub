@@ -392,6 +392,27 @@ BOOL _PeFile::AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecA
 	return TRUE;
 }
 
+VOID _PeFile::SetOep(DWORD oepValue){
+	switch (fileBit){
+	case Bit32:
+		ntHdr32->OptionalHeader.AddressOfEntryPoint = oepValue;
+		break;
+	case Bit64:
+		ntHdr64->OptionalHeader.AddressOfEntryPoint = oepValue;
+		break;
+	}
+}
+
+DWORD64 _PeFile::GetImageBase(){
+	switch (fileBit) {
+	case Bit32:
+		return ntHdr32->OptionalHeader.ImageBase;
+	case Bit64:
+		return ntHdr64->OptionalHeader.ImageBase;
+	}
+	return 0;
+}
+
 _PeFile::_PeFile() {
 	dosHdr = 0;
 	ntHdr32 = 0;

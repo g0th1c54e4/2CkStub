@@ -27,12 +27,8 @@ int main() {
 	CHAR stubFilePath[MAX_PATH] = "C:\\Users\\90965\\Desktop\\Ck2Stub\\Stub32.bin";
 	//cin.getline(stubFilePath, sizeof(stubFilePath));
 
-	cout << "[*] 请键入区块名(限定8个字符): .ck2" << endl; //如果用户输入的8个字符都是有效字符，可能会出现BUG
-	//CHAR stubSecName[8] = { 0 };
-	CHAR stubSecName[8] = ".ck2";
-	//cin.getline(stubSecName, sizeof(stubSecName));
 
-	if (Ck2Stub::Pack(targetFilePath, stubFilePath, stubSecName) == TRUE) {
+	if (Ck2Stub::Pack(targetFilePath, stubFilePath, ".ck2_0", (CHAR*)"C:\\Users\\90965\\Desktop\\Ck2Stub\\Test.Ck2.exe") == TRUE) {
 		cout << "[+] 加壳成功。";
 	}
 	else {

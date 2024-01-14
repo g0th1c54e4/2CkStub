@@ -28,13 +28,13 @@ namespace Ck2Stub {
 
 
 		if (targetFile.GetDirByOrder(Dir_ComDescriptor)->VirtualAddress != 0) {
-			cout << "[-]此程序为.net程序。" << endl;
+			cout << "[-] 此程序为.net程序。" << endl;
 			targetFile.ClosePeFile();
 			stubFile.ClosePeFile();
 			return FALSE;
 		}
 		if (targetFile.GetDirByOrder(Dir_Security)->VirtualAddress != 0) {
-			cout << "[-]此程序携带有数字签名。" << endl;
+			cout << "[-] 此程序携带有数字签名。" << endl;
 			targetFile.ClosePeFile();
 			stubFile.ClosePeFile();
 			return FALSE;
@@ -46,20 +46,28 @@ namespace Ck2Stub {
 			loadConfigDir->VirtualAddress = 0;
 			loadConfigDir->Size = 0;
 
-			cout << "[+]已关闭SafeSEH保护。" << endl;
+			cout << "[+] 已关闭SafeSEH保护。" << endl;
 		}
 		targetFile.DynamicsBaseOff();
-		cout << "[+]已关闭动态基址。" << endl;
+		cout << "[+] 已关闭动态基址。" << endl;
 
 		PIMAGE_SECTION_HEADER pStubCodeSec = stubFile.GetCodeSec();
-		PIMAGE_SECTION_HEADER pStubRelocSec = stubFile.GetRelocSec();
 
 		IMAGE_SECTION_HEADER newCodeSec = { 0 };
 		DWORD newCodeSecAddrFoa = 0;
-		targetFile.AddSection(stubSecName, pStubCodeSec->SizeOfRawData, IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_INITIALIZED_DATA, &newCodeSec, &newCodeSecAddrFoa);
+		targetFile.AddSection(stubSecName, pStubCodeSec->SizeOfRawData, CK2STUB_SECTION_ATTRIB, &newCodeSec, &newCodeSecAddrFoa);
 		RtlCopyMemory((LPVOID)((DWORD64)targetFile.bufAddr + newCodeSecAddrFoa), (LPVOID)((DWORD64)stubFile.bufAddr + pStubCodeSec->PointerToRawData), pStubCodeSec->SizeOfRawData);
 
 		//TODO
+
+		RelocPack(&targetFile, &stubFile);
+		cout << "[+] 已处理重定位信息。" << endl;
+		TlsPack(&targetFile, &stubFile);
+		cout << "[+] 已处理TLS回调信息。" << endl;
+		IatPack(&targetFile, &stubFile);
+		cout << "[+] 已处理IAT表信息。" << endl;
+
+		targetFile.SetOep(newCodeSec.VirtualAddress + targetFile.Foa2Rva(stubOepSecOffset));
 
 		if (targetFile.SaveAs(saveFilePath) == FALSE) {
 			targetFile.ClosePeFile();
@@ -72,6 +80,66 @@ namespace Ck2Stub {
 		targetFile.ClosePeFile();
 		stubFile.ClosePeFile();
 		return TRUE;
+	}
+
+	VOID TlsPack(PeFile* targetFile, PeFile* stubFile){
+		return VOID();
+	}
+
+	VOID IatPack(PeFile* targetFile, PeFile* stubFile){
+		return VOID();
+	}
+
+	VOID RelocPack(PeFile* targetFile, PeFile* stubFile){
+		PIMAGE_SECTION_HEADER stubRelocSec = stubFile->GetRelocSec();
+		PIMAGE_SECTION_HEADER stubCodeSec = stubFile->GetCodeSec();
+		IMAGE_SECTION_HEADER newRelocSec = { 0 };
+		DWORD newRelocSecAddrFoa = 0;
+		targetFile->AddSection(".ck2_1", stubRelocSec->SizeOfRawData, CK2STUB_SECTION_ATTRIB, &newRelocSec, &newRelocSecAddrFoa);
+		PIMAGE_SECTION_HEADER codeSec = targetFile->GetSecHdrByName(".ck2_0");
+		RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newRelocSecAddrFoa), (LPVOID)((DWORD64)stubFile->bufAddr + stubRelocSec->PointerToRawData), stubRelocSec->SizeOfRawData);
+		
+		PIMAGE_BASE_RELOCATION pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)targetFile->bufAddr + newRelocSecAddrFoa);
+
+		DWORD relocSize = 0;
+		while (pReloc->VirtualAddress != 0 && pReloc->SizeOfBlock != 0) {
+			if ((pReloc->VirtualAddress >= stubCodeSec->VirtualAddress) && (pReloc->VirtualAddress <= (stubCodeSec->VirtualAddress + stubCodeSec->Misc.VirtualSize))) {
+				// Code区域
+				pReloc->VirtualAddress -= stubCodeSec->VirtualAddress;
+				pReloc->VirtualAddress += codeSec->VirtualAddress;
+
+				struct TypeOffset {
+					WORD offset : 12;
+					WORD type : 4;
+				};
+				TypeOffset* pTypeOffs = (TypeOffset*)(pReloc + 1);
+				DWORD dwCount = (pReloc->SizeOfBlock - 8) / 2;
+				for (UINT i = 0; i < dwCount; i++) {
+					if (pTypeOffs[i].type != 3) {
+						continue;
+					}
+					PDWORD pdwRepairAddr = (PDWORD)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(pReloc->VirtualAddress + pTypeOffs[i].offset));
+					*pdwRepairAddr -= (DWORD)stubFile->GetImageBase();
+					*pdwRepairAddr -= stubCodeSec->VirtualAddress;
+					*pdwRepairAddr += (DWORD)targetFile->GetImageBase();
+					*pdwRepairAddr += codeSec->VirtualAddress;
+				}
+
+				relocSize += pReloc->SizeOfBlock;
+			}
+			else {
+				// 非Code区域
+				// TODO
+			}
+			pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)pReloc + pReloc->SizeOfBlock);
+		}
+		
+		// TODO 保存原先的重定位信息
+		
+		PIMAGE_DATA_DIRECTORY dirReloc = targetFile->GetDirByOrder(Dir_BaseReloc);
+		dirReloc->VirtualAddress = newRelocSec.VirtualAddress;
+		dirReloc->Size = relocSize;
+		
 	}
 
 	DWORD WINAPI GetStubOriginEntryPointOffset(PeFile* stubFile){

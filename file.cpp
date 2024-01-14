@@ -182,10 +182,11 @@ BOOL _FileBuf::SaveAs(CHAR* saveFilePath){
 		CloseHandle(hFileHandle);
 		return FALSE;
 	}
-	if (ReadFile(hFileHandle, this->bufAddr, this->bufSize, &dwNumOfRead, NULL) == FALSE) {
+	if (WriteFile(hFileHandle, this->bufAddr, this->bufSize, &dwNumOfRead, NULL) == FALSE) {
 		CloseHandle(hFileHandle);
 		return FALSE;
 	}
+	CloseHandle(hFileHandle);
 	return TRUE;
 }
 
@@ -202,10 +203,11 @@ BOOL _FileBuf::SaveAs(WCHAR* saveFilePath){
 		CloseHandle(hFileHandle);
 		return FALSE;
 	}
-	if (ReadFile(hFileHandle, this->bufAddr, this->bufSize, &dwNumOfRead, NULL) == FALSE) {
+	if (WriteFile(hFileHandle, this->bufAddr, this->bufSize, &dwNumOfRead, NULL) == FALSE) {
 		CloseHandle(hFileHandle);
 		return FALSE;
 	}
+	CloseHandle(hFileHandle);
 	return TRUE;
 }
 
