@@ -443,6 +443,16 @@ VOID _PeFile::SetOep(DWORD oepValue){
 	}
 }
 
+DWORD _PeFile::GetOep(){
+	switch (fileBit) {
+	case Bit32:
+		return ntHdr32->OptionalHeader.AddressOfEntryPoint;
+	case Bit64:
+		return ntHdr64->OptionalHeader.AddressOfEntryPoint;
+	}
+	return 0;
+}
+
 DWORD64 _PeFile::GetImageBase(){
 	switch (fileBit) {
 	case Bit32:

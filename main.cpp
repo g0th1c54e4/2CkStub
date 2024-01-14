@@ -22,9 +22,9 @@ int main() {
 	//cin.getline(targetFilePath, sizeof(targetFilePath));
 
 	// C:\Users\90965\Desktop\Ck2Stub\Stub32.bin
-	cout << "[*] 请键入壳的文件路径: C:\\Users\\90965\\Desktop\\Ck2Stub\\Stub32.bin" << endl;
+	cout << "[*] 请键入壳的文件路径: C:\\Users\\90965\\source\\repos\\2CkStub\\Release\\Stub32.bin" << endl;
 	//CHAR stubFilePath[MAX_PATH] = { 0 };
-	CHAR stubFilePath[MAX_PATH] = "C:\\Users\\90965\\Desktop\\Ck2Stub\\Stub32.bin";
+	CHAR stubFilePath[MAX_PATH] = "C:\\Users\\90965\\source\\repos\\2CkStub\\Release\\Stub32.bin";
 	//cin.getline(stubFilePath, sizeof(stubFilePath));
 
 

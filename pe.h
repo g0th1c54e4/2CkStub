@@ -91,6 +91,7 @@ public:
 	BOOL ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA); //扩充最后一个区块
 	
 	VOID SetOep(DWORD oepValue); //设置新的OEP入口点
+	DWORD GetOep(); //获取OEP入口点
 
 	DWORD64 GetImageBase(); //获取映像基址 (32位下请自行将返回值强制转换成DWORD型)
 

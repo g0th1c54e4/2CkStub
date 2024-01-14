@@ -5,8 +5,11 @@
 #define SHARE_INFO_NAME "share_info"//请勿改动
 
 typedef struct _SHARE_INFO {
-	//原始程序的正常原始执行入口
-	DWORD64 OriginEntryPoint;
+	//原始程序的正常原始执行入口偏移
+	DWORD OriginEntryPoint;
+
+	//用于计算当前模块的基址
+	DWORD ImageBaseOffset;
 
 	//壳程序的执行入口偏移
 	DWORD StubOriginEntryPointOffest;

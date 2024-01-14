@@ -29,12 +29,13 @@ namespace Ck2Stub {
 			stubFile.ClosePeFile();
 			return FALSE;
 		}
-		if (targetFile.GetDirByOrder(Dir_Security)->VirtualAddress != 0) {
-			cout << "[-] 此程序携带有数字签名。" << endl;
-			targetFile.ClosePeFile();
-			stubFile.ClosePeFile();
-			return FALSE;
-		}
+
+		//if (targetFile.GetDirByOrder(Dir_Security)->VirtualAddress != 0) {
+		//	cout << "[-] 此程序携带有数字签名。" << endl;
+		//	targetFile.ClosePeFile();
+		//	stubFile.ClosePeFile();
+		//	return FALSE;
+		//}
 		
 		if (targetFile.GetDirByOrder(Dir_LoadConfig)->VirtualAddress != 0) { //关闭SafeSEH保护为后续LVMProtectA的开发作基础
 			PIMAGE_DATA_DIRECTORY loadConfigDir = targetFile.GetDirByOrder(Dir_LoadConfig);
@@ -45,8 +46,8 @@ namespace Ck2Stub {
 
 			cout << "[+] 已关闭SafeSEH保护。" << endl;
 		}
-		targetFile.DynamicsBaseOff();
-		cout << "[+] 已关闭动态基址。" << endl;
+		//targetFile.DynamicsBaseOff();
+		//cout << "[+] 已关闭动态基址。" << endl;
 
 		PIMAGE_SECTION_HEADER pStubCodeSec = stubFile.GetCodeSec();
 
@@ -56,13 +57,13 @@ namespace Ck2Stub {
 		RtlCopyMemory((LPVOID)((DWORD64)targetFile.bufAddr + newCodeSecAddrFoa), (LPVOID)((DWORD64)stubFile.bufAddr + pStubCodeSec->PointerToRawData), pStubCodeSec->SizeOfRawData);
 
 
-		//TODO Stub
+		SHARE_INFO share_info = { 0 };
+		share_info.OriginEntryPoint = targetFile.GetOep(); //RVA
 		
 
 		//TODO LVMProtect
 
-
-		RelocPack(&targetFile, &stubFile);
+		RelocPack(&targetFile, &stubFile, &share_info);
 		cout << "[+] 已处理重定位信息。" << endl;
 		IMAGE_SECTION_HEADER retSecHdr = { 0 };
 		DWORD extBufAddr = 0;
@@ -77,6 +78,12 @@ namespace Ck2Stub {
 		ResourcePack(&targetFile, &stubFile);
 		cout << "[+] 已处理资源表信息。" << endl;
 		*/
+
+		//本地PE文件的share_info的对应地址
+		LPVOID shareInfoAddr = (LPVOID)((DWORD64)targetFile.bufAddr + targetFile.Rva2Foa(newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile)));
+		share_info.ImageBaseOffset = newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile);
+		RtlCopyMemory(shareInfoAddr, &share_info, sizeof(SHARE_INFO)); //上传share_info
+
 
 		targetFile.SetOep(newCodeSec.VirtualAddress + stubOepSecOffset);
 
@@ -93,17 +100,17 @@ namespace Ck2Stub {
 		return TRUE;
 	}
 
-	VOID TlsPack(PeFile* targetFile, PeFile* stubFile){
+	VOID TlsPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
 		//
 	}
 
-	VOID IatPack(PeFile* targetFile, PeFile* stubFile){
+	VOID IatPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
 		//关于Iat，必须要完成两个任务
 		//1.将Stub自身的导入表换到原程序上
 		//2.保护好原程序的导入表(可以参考吾爱、看雪论坛上的关于IAT加密的帖子来学习)
 	}
 
-	VOID RelocPack(PeFile* targetFile, PeFile* stubFile){
+	VOID RelocPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
 		PIMAGE_SECTION_HEADER stubRelocSec = stubFile->GetRelocSec();
 		PIMAGE_SECTION_HEADER stubCodeSec = stubFile->GetCodeSec();
 		IMAGE_SECTION_HEADER newRelocSec = { 0 };
@@ -150,40 +157,35 @@ namespace Ck2Stub {
 			pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)pReloc + pReloc->SizeOfBlock);
 		}
 		
-		// TODO 保存原先的重定位信息
-		
 		PIMAGE_DATA_DIRECTORY dirReloc = targetFile->GetDirByOrder(Dir_BaseReloc);
+		share_info->RelocRva = dirReloc->VirtualAddress;
+		share_info->RelocSize = dirReloc->Size;
 		dirReloc->VirtualAddress = newRelocSec.VirtualAddress;
 		dirReloc->Size = relocSize;
 		
 	}
 
-	VOID BoundImportPack(PeFile* targetFile, PeFile* stubFile){
+	VOID BoundImportPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
 		//仅仅将Stub的绑定输入表 清除 就可以了
 		//包括数据目录表的RVA和Size的信息，以及其对应指向的数据区域
 	}
 
-	VOID ResourcePack(PeFile* targetFile, PeFile* stubFile){
+	VOID ResourcePack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
 		//任务:保护好原程序的资源不被轻易改动
 	}
 
 	DWORD WINAPI GetStubOriginEntryPointOffset(PeFile* stubFile){
-
 		PIMAGE_SECTION_HEADER secCode = stubFile->GetCodeSec();
 		if (secCode == 0) {
 			return 0;
 		}
-		DWORD offset = 0;
-		switch (stubFile->fileBit){
-		case Bit32:
-			offset = stubFile->ntHdr32->OptionalHeader.AddressOfEntryPoint - secCode->VirtualAddress;
-			break;
-		case Bit64:
-			offset = stubFile->ntHdr64->OptionalHeader.AddressOfEntryPoint - secCode->VirtualAddress;
-			break;
-		}
-
+		DWORD offset = stubFile->GetOep() - secCode->VirtualAddress;
 		return offset;
+	}
+
+	DWORD WINAPI GetStubShareInfoOffset(PeFile* stubFile){
+		DWORD funcExportRva = stubFile->GetExportFuncAddrRVA((CHAR*)SHARE_INFO_NAME);
+		return (funcExportRva - stubFile->GetCodeSec()->VirtualAddress);
 	}
 
 }

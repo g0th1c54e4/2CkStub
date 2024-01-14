@@ -12,6 +12,13 @@ extern "C" {
 SHARE_INFO share_info = { 0 };
 #endif
 
-HMODULE g_hCurrentModuleHandle = 0;
+#ifdef _WIN64
+DWORD64 imageBase = 0;
+#else
+DWORD imageBase = 0;
+#endif
+
+
+
 
 #endif

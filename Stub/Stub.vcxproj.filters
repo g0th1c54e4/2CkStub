@@ -10,4 +10,7 @@
   <ItemGroup>
     <None Include="Export.def" />
   </ItemGroup>
+  <ItemGroup>
+    <MASM Include="stub.asm" />
+  </ItemGroup>
 </Project>
