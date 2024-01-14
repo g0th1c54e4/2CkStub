@@ -28,6 +28,7 @@
     <ClInclude Include="Packer.h">
       <Filter>Pack</Filter>
     </ClInclude>
+    <ClInclude Include="Public\StubInfo_Public.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="file">

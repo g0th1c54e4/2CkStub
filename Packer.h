@@ -17,6 +17,8 @@ namespace Ck2Stub {
 	VOID TlsPack(PeFile* targetFile, PeFile* stubFile);
 	VOID IatPack(PeFile* targetFile, PeFile* stubFile);
 	VOID RelocPack(PeFile* targetFile, PeFile* stubFile);
+	VOID BoundImportPack(PeFile* targetFile, PeFile* stubFile);
+	VOID ResourcePack(PeFile* targetFile, PeFile* stubFile);
 
 }
 

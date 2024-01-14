@@ -88,11 +88,13 @@ namespace Ck2Stub {
 	}
 
 	VOID TlsPack(PeFile* targetFile, PeFile* stubFile){
-		
+		//
 	}
 
 	VOID IatPack(PeFile* targetFile, PeFile* stubFile){
-		
+		//关于Iat，必须要完成两个任务
+		//1.将Stub自身的导入表换到原程序上
+		//2.保护好原程序的导入表(可以参考吾爱、看雪论坛上的关于IAT加密的帖子来学习)
 	}
 
 	VOID RelocPack(PeFile* targetFile, PeFile* stubFile){
@@ -146,6 +148,15 @@ namespace Ck2Stub {
 		dirReloc->VirtualAddress = newRelocSec.VirtualAddress;
 		dirReloc->Size = relocSize;
 		
+	}
+
+	VOID BoundImportPack(PeFile* targetFile, PeFile* stubFile){
+		//仅仅将Stub的绑定输入表 清除 就可以了
+		//包括数据目录表的RVA和Size的信息，以及其对应指向的数据区域
+	}
+
+	VOID ResourcePack(PeFile* targetFile, PeFile* stubFile){
+		//任务:保护好原程序的资源不被轻易改动
 	}
 
 	DWORD WINAPI GetStubOriginEntryPointOffset(PeFile* stubFile){

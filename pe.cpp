@@ -373,6 +373,47 @@ BOOL _PeFile::AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecA
 	return TRUE;
 }
 
+BOOL _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA){
+	UINT numOfSec = this->ntHdr32->FileHeader.NumberOfSections;
+
+	PIMAGE_SECTION_HEADER lastSec = &firstSecHdr[numOfSec - 1];
+	DWORD sizeOfAddData = this->bufSize - (lastSec->PointerToRawData + lastSec->SizeOfRawData); //附加数据大小
+	DWORD sizeOfOriginRawData = lastSec->SizeOfRawData; //原始区块的文件形式大小
+	lastSec->Characteristics = newSecAttrib;
+	lastSec->SizeOfRawData += AlignFile(addSize);
+	lastSec->Misc.VirtualSize += AlignSection(addSize);
+
+	if (fileBit == Bit32) {
+		ntHdr32->OptionalHeader.SizeOfImage += AlignSection(addSize);
+	}
+	if (fileBit == Bit64) {
+		ntHdr64->OptionalHeader.SizeOfImage += AlignSection(addSize);
+	}
+	
+	LocalBuf addData;
+	LPVOID newBufAddr = (LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + sizeOfOriginRawData);
+	if (sizeOfAddData > 0) {
+		addData.CopyBuffer((LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + lastSec->SizeOfRawData), sizeOfAddData); //保存附加数据
+	}
+
+	ReSize(this->bufSize + AlignFile(addSize));
+	PIMAGE_SECTION_HEADER lastSec = &firstSecHdr[numOfSec - 1];
+	newBufAddr = (LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + sizeOfOriginRawData); //BufAddr 需要重新计算
+	RtlZeroMemory(newBufAddr, AlignFile(addSize));
+	if (sizeOfAddData > 0) {
+		RtlCopyMemory((LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + lastSec->SizeOfRawData), addData.bufAddr, sizeOfAddData); //追加附加数据
+	}
+	addData.FreeBuffer();
+
+	if (GetDirByOrder(Dir_Security)->VirtualAddress == lastSec->PointerToRawData + sizeOfOriginRawData) {
+		GetDirByOrder(Dir_Security)->VirtualAddress = lastSec->PointerToRawData + lastSec->SizeOfRawData;
+	}
+
+	RtlCopyMemory(secReturnHdr, lastSec, sizeof(IMAGE_SECTION_HEADER));
+	*secReturnFOA = lastSec->PointerToRawData + sizeOfOriginRawData;
+	return TRUE;
+}
+
 VOID _PeFile::SetOep(DWORD oepValue){
 	switch (fileBit){
 	case Bit32:
