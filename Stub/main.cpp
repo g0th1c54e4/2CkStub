@@ -9,10 +9,6 @@
 #ifndef _WIN64
 _declspec(naked)
 VOID WINAPI StubEntry() {
-
-	APIInit();
-	VMInit();
-	Call_Entry();
 	_asm {
 		jmp share_info.OriginEntryPoint32
 	}

@@ -70,6 +70,8 @@ public:
 	
 	std::vector<PIMAGE_SECTION_HEADER> GetSecHdrList(); //获取区块头数组
 	PIMAGE_SECTION_HEADER GetSecHdrByName(CONST CHAR* sectionName); //根据区块名来获取对应区块头
+	PIMAGE_SECTION_HEADER GetSecHdrByRva(DWORD rvaValue); //根据Rva来获取对应区块头
+	PIMAGE_SECTION_HEADER GetSecHdrByFoa(DWORD foaValue); //根据Foa来获取对应区块头
 	PIMAGE_SECTION_HEADER GetCodeSec(); //获取OEP所在区块对应的区块头
 	PIMAGE_SECTION_HEADER GetRelocSec(); //获取重定位表所在区块对应的区块头
 	

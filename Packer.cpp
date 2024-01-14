@@ -14,7 +14,6 @@ namespace Ck2Stub {
 		if (stubFile.Init(stubFilePath) == FALSE) {
 			return FALSE;
 		}
-
 		if (targetFile.fileBit != stubFile.fileBit) {
 			return FALSE;
 		}
@@ -23,8 +22,6 @@ namespace Ck2Stub {
 		if (stubOepSecOffset == 0) {
 			return FALSE;
 		}
-
-		//此处不应该分别设置32位和64位的处理
 
 		if (targetFile.GetDirByOrder(Dir_ComDescriptor)->VirtualAddress != 0) {
 			cout << "[-] 此程序为.net程序。" << endl;
@@ -67,10 +64,19 @@ namespace Ck2Stub {
 
 		RelocPack(&targetFile, &stubFile);
 		cout << "[+] 已处理重定位信息。" << endl;
+		IMAGE_SECTION_HEADER retSecHdr = { 0 };
+		DWORD extBufAddr = 0;
+
+		/*
 		TlsPack(&targetFile, &stubFile);
 		cout << "[+] 已处理TLS回调信息。" << endl;
 		IatPack(&targetFile, &stubFile);
 		cout << "[+] 已处理IAT表信息。" << endl;
+		BoundImportPack(&targetFile, &stubFile);
+		cout << "[+] 已处理绑定输入表信息。" << endl;
+		ResourcePack(&targetFile, &stubFile);
+		cout << "[+] 已处理资源表信息。" << endl;
+		*/
 
 		targetFile.SetOep(newCodeSec.VirtualAddress + stubOepSecOffset);
 
@@ -102,7 +108,7 @@ namespace Ck2Stub {
 		PIMAGE_SECTION_HEADER stubCodeSec = stubFile->GetCodeSec();
 		IMAGE_SECTION_HEADER newRelocSec = { 0 };
 		DWORD newRelocSecAddrFoa = 0;
-		targetFile->AddSection(RELOC_SECTION_NAME, stubRelocSec->SizeOfRawData, CK2STUB_SECTION_ATTRIB, &newRelocSec, &newRelocSecAddrFoa);
+		targetFile->AddSection(CODEINFO_SECTION_NAME, stubRelocSec->SizeOfRawData, CK2STUB_SECTION_ATTRIB, &newRelocSec, &newRelocSecAddrFoa);
 		PIMAGE_SECTION_HEADER codeSec = targetFile->GetSecHdrByName(CODE_SECTION_NAME);
 		RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newRelocSecAddrFoa), (LPVOID)((DWORD64)stubFile->bufAddr + stubRelocSec->PointerToRawData), stubRelocSec->SizeOfRawData);
 		
@@ -136,8 +142,10 @@ namespace Ck2Stub {
 			}
 			else {
 				// 非Code区域
-				LPVOID relocBlockAddr = (LPVOID)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(pReloc->VirtualAddress - stubCodeSec->VirtualAddress + codeSec->VirtualAddress));
-				RtlZeroMemory(relocBlockAddr, pReloc->SizeOfBlock);
+				DWORD sizeOfRelocBlock = pReloc->SizeOfBlock;
+				RtlZeroMemory(pReloc, sizeOfRelocBlock);
+				pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)pReloc + sizeOfRelocBlock);
+				continue;
 			}
 			pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)pReloc + pReloc->SizeOfBlock);
 		}

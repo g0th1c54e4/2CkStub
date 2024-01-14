@@ -107,7 +107,25 @@ std::vector<PIMAGE_SECTION_HEADER> _PeFile::GetSecHdrList(){
 PIMAGE_SECTION_HEADER _PeFile::GetSecHdrByName(CONST CHAR* sectionName){
 	for (int i = 0; i < ntHdr32->FileHeader.NumberOfSections; i++) {
 		if (strcmp((LPCSTR)firstSecHdr[i].Name, sectionName) == 0) {
-			return &firstSecHdr[i];
+			return (firstSecHdr + i);
+		}
+	}
+	return 0;
+}
+
+PIMAGE_SECTION_HEADER _PeFile::GetSecHdrByRva(DWORD rvaValue){
+	for (int i = 0; i < ntHdr32->FileHeader.NumberOfSections; i++) {
+		if (rvaValue >= firstSecHdr[i].VirtualAddress && rvaValue <= firstSecHdr[i].VirtualAddress + firstSecHdr[i].Misc.VirtualSize) {
+			return (firstSecHdr + i);
+		}
+	}
+	return 0;
+}
+
+PIMAGE_SECTION_HEADER _PeFile::GetSecHdrByFoa(DWORD foaValue){
+	for (int i = 0; i < ntHdr32->FileHeader.NumberOfSections; i++) {
+		if (foaValue >= firstSecHdr[i].PointerToRawData && foaValue <= firstSecHdr[i].PointerToRawData + firstSecHdr[i].SizeOfRawData) {
+			return (firstSecHdr + i);
 		}
 	}
 	return 0;
@@ -397,7 +415,7 @@ BOOL _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION
 	}
 
 	ReSize(this->bufSize + AlignFile(addSize));
-	PIMAGE_SECTION_HEADER lastSec = &firstSecHdr[numOfSec - 1];
+	lastSec = &firstSecHdr[numOfSec - 1];
 	newBufAddr = (LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + sizeOfOriginRawData); //BufAddr 需要重新计算
 	RtlZeroMemory(newBufAddr, AlignFile(addSize));
 	if (sizeOfAddData > 0) {
