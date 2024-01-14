@@ -28,7 +28,7 @@ int main() {
 	//cin.getline(stubFilePath, sizeof(stubFilePath));
 
 
-	if (Ck2Stub::Pack(targetFilePath, stubFilePath, ".ck2_0", (CHAR*)"C:\\Users\\90965\\Desktop\\Ck2Stub\\Test.Ck2.exe") == TRUE) {
+	if (Ck2Stub::Pack(targetFilePath, stubFilePath, (CHAR*)"C:\\Users\\90965\\Desktop\\Ck2Stub\\Test.Ck2.exe") == TRUE) {
 		cout << "[+] ¼Ó¿Ç³É¹¦¡£";
 	}
 	else {

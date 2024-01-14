@@ -6,7 +6,7 @@ using std::cout;
 using std::endl;
 
 namespace Ck2Stub {
-	BOOL WINAPI Pack(CHAR* targetFilePath, CHAR* stubFilePath, CONST CHAR* stubSecName, CHAR* saveFilePath) {
+	BOOL WINAPI Pack(CHAR* targetFilePath, CHAR* stubFilePath, CHAR* saveFilePath) {
 		PeFile targetFile, stubFile;
 		if (targetFile.Init(targetFilePath) == FALSE) {
 			return FALSE;
@@ -55,10 +55,15 @@ namespace Ck2Stub {
 
 		IMAGE_SECTION_HEADER newCodeSec = { 0 };
 		DWORD newCodeSecAddrFoa = 0;
-		targetFile.AddSection(stubSecName, pStubCodeSec->SizeOfRawData, CK2STUB_SECTION_ATTRIB, &newCodeSec, &newCodeSecAddrFoa);
+		targetFile.AddSection(CODE_SECTION_NAME, pStubCodeSec->SizeOfRawData, CK2STUB_SECTION_ATTRIB, &newCodeSec, &newCodeSecAddrFoa);
 		RtlCopyMemory((LPVOID)((DWORD64)targetFile.bufAddr + newCodeSecAddrFoa), (LPVOID)((DWORD64)stubFile.bufAddr + pStubCodeSec->PointerToRawData), pStubCodeSec->SizeOfRawData);
 
-		//TODO
+
+		//TODO Stub
+		
+
+		//TODO LVMProtect
+
 
 		RelocPack(&targetFile, &stubFile);
 		cout << "[+] 已处理重定位信息。" << endl;
@@ -95,8 +100,8 @@ namespace Ck2Stub {
 		PIMAGE_SECTION_HEADER stubCodeSec = stubFile->GetCodeSec();
 		IMAGE_SECTION_HEADER newRelocSec = { 0 };
 		DWORD newRelocSecAddrFoa = 0;
-		targetFile->AddSection(".ck2_1", stubRelocSec->SizeOfRawData, CK2STUB_SECTION_ATTRIB, &newRelocSec, &newRelocSecAddrFoa);
-		PIMAGE_SECTION_HEADER codeSec = targetFile->GetSecHdrByName(".ck2_0");
+		targetFile->AddSection(RELOC_SECTION_NAME, stubRelocSec->SizeOfRawData, CK2STUB_SECTION_ATTRIB, &newRelocSec, &newRelocSecAddrFoa);
+		PIMAGE_SECTION_HEADER codeSec = targetFile->GetSecHdrByName(CODE_SECTION_NAME);
 		RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newRelocSecAddrFoa), (LPVOID)((DWORD64)stubFile->bufAddr + stubRelocSec->PointerToRawData), stubRelocSec->SizeOfRawData);
 		
 		PIMAGE_BASE_RELOCATION pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)targetFile->bufAddr + newRelocSecAddrFoa);
@@ -129,7 +134,8 @@ namespace Ck2Stub {
 			}
 			else {
 				// 非Code区域
-				// TODO
+				LPVOID relocBlockAddr = (LPVOID)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(pReloc->VirtualAddress - stubCodeSec->VirtualAddress + codeSec->VirtualAddress));
+				RtlZeroMemory(relocBlockAddr, pReloc->SizeOfBlock);
 			}
 			pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)pReloc + pReloc->SizeOfBlock);
 		}
