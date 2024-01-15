@@ -46,8 +46,6 @@ namespace Ck2Stub {
 
 			cout << "[+] 已关闭SafeSEH保护。" << endl;
 		}
-		//targetFile.DynamicsBaseOff();
-		//cout << "[+] 已关闭动态基址。" << endl;
 
 		PIMAGE_SECTION_HEADER pStubCodeSec = stubFile.GetCodeSec();
 
@@ -65,28 +63,24 @@ namespace Ck2Stub {
 
 		RelocPack(&targetFile, &stubFile, &share_info);
 		cout << "[+] 已处理重定位信息。" << endl;
-		IMAGE_SECTION_HEADER retSecHdr = { 0 };
-		DWORD extBufAddr = 0;
-
-		/*
-		TlsPack(&targetFile, &stubFile);
-		cout << "[+] 已处理TLS回调信息。" << endl;
-		IatPack(&targetFile, &stubFile);
+		
+		//TlsPack(&targetFile, &stubFile, &share_info);
+		//cout << "[+] 已处理TLS回调信息。" << endl;
+		IatPack(&targetFile, &stubFile, &share_info);
 		cout << "[+] 已处理IAT表信息。" << endl;
-		BoundImportPack(&targetFile, &stubFile);
-		cout << "[+] 已处理绑定输入表信息。" << endl;
-		ResourcePack(&targetFile, &stubFile);
-		cout << "[+] 已处理资源表信息。" << endl;
-		*/
+		//BoundImportPack(&targetFile, &stubFile, &share_info);
+		//cout << "[+] 已处理绑定输入表信息。" << endl;
+		//ResourcePack(&targetFile, &stubFile, &share_info);
+		//cout << "[+] 已处理资源表信息。" << endl;
+		
 
-		//本地PE文件的share_info的对应地址
-		LPVOID shareInfoAddr = (LPVOID)((DWORD64)targetFile.bufAddr + targetFile.Rva2Foa(newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile)));
+		LPVOID shareInfoAddr = (LPVOID)((DWORD64)targetFile.bufAddr + targetFile.Rva2Foa(newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile)));//本地PE文件的share_info的对应地址
 		share_info.ImageBaseOffset = newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile);
 		RtlCopyMemory(shareInfoAddr, &share_info, sizeof(SHARE_INFO)); //上传share_info
 
-
 		targetFile.SetOep(newCodeSec.VirtualAddress + stubOepSecOffset);
 
+		SetAllSectionWritable(&targetFile);//设置全部区块可写
 		if (targetFile.SaveAs(saveFilePath) == FALSE) {
 			targetFile.ClosePeFile();
 			stubFile.ClosePeFile();
@@ -105,6 +99,9 @@ namespace Ck2Stub {
 	}
 
 	VOID IatPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
+		//std::vector<PIMAGE_IMPORT_DESCRIPTOR> a = stubFile->GetIIDList();
+		//int b = 1;
+
 		//关于Iat，必须要完成两个任务
 		//1.将Stub自身的导入表换到原程序上
 		//2.保护好原程序的导入表(可以参考吾爱、看雪论坛上的关于IAT加密的帖子来学习)
@@ -135,14 +132,16 @@ namespace Ck2Stub {
 				TypeOffset* pTypeOffs = (TypeOffset*)(pReloc + 1);
 				DWORD dwCount = (pReloc->SizeOfBlock - 8) / 2;
 				for (UINT i = 0; i < dwCount; i++) {
-					if (pTypeOffs[i].type != 3) {
+					if (pTypeOffs[i].type != IMAGE_REL_BASED_HIGHLOW) {
 						continue;
 					}
 					PDWORD pdwRepairAddr = (PDWORD)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(pReloc->VirtualAddress + pTypeOffs[i].offset));
-					*pdwRepairAddr -= (DWORD)stubFile->GetImageBase();
-					*pdwRepairAddr -= stubCodeSec->VirtualAddress;
-					*pdwRepairAddr += (DWORD)targetFile->GetImageBase();
-					*pdwRepairAddr += codeSec->VirtualAddress;
+					if (stubFile->GetSecHdrByRva((*pdwRepairAddr) - (DWORD)stubFile->GetImageBase()) == stubCodeSec){ //只修复指向.text区域的数据，与上面的判断不同
+						*pdwRepairAddr -= (DWORD)stubFile->GetImageBase();
+						*pdwRepairAddr -= stubCodeSec->VirtualAddress;
+						*pdwRepairAddr += (DWORD)targetFile->GetImageBase();
+						*pdwRepairAddr += codeSec->VirtualAddress;
+					}
 				}
 
 				relocSize += pReloc->SizeOfBlock;
@@ -186,6 +185,13 @@ namespace Ck2Stub {
 	DWORD WINAPI GetStubShareInfoOffset(PeFile* stubFile){
 		DWORD funcExportRva = stubFile->GetExportFuncAddrRVA((CHAR*)SHARE_INFO_NAME);
 		return (funcExportRva - stubFile->GetCodeSec()->VirtualAddress);
+	}
+
+	VOID WINAPI SetAllSectionWritable(PeFile* peFile){
+		std::vector<PIMAGE_SECTION_HEADER> SecHdrList = peFile->GetSecHdrList();
+		for (UINT i = 0; i < SecHdrList.size(); i++){
+			SecHdrList[i]->Characteristics |= IMAGE_SCN_MEM_WRITE;
+		}
 	}
 
 }

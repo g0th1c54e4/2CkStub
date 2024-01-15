@@ -19,6 +19,4 @@ DWORD imageBase = 0;
 #endif
 
 
-
-
 #endif

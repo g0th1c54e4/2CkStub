@@ -99,6 +99,8 @@ public:
 	DWORD SetCheckSum(); //设置当前PE文件的校验和
 	DWORD CalcCheckSum(); //计算当前PE文件的校验和(输入整个PE文件，计算出准确的校验和)
 
+	std::vector<PIMAGE_IMPORT_DESCRIPTOR> GetIIDList(); //获取IID导入表列表
+
 	VOID ClosePeFile();
 	_PeFile();
 	~_PeFile();

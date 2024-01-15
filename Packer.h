@@ -12,6 +12,7 @@
 namespace Ck2Stub {
 	DWORD WINAPI GetStubOriginEntryPointOffset(PeFile* stubFile);
 	DWORD WINAPI GetStubShareInfoOffset(PeFile* stubFile);
+	VOID WINAPI SetAllSectionWritable(PeFile* peFile);
 
 	BOOL WINAPI Pack(CHAR* targetFilePath, CHAR* stubFilePath, CHAR* saveFilePath);
 
@@ -20,6 +21,7 @@ namespace Ck2Stub {
 	VOID RelocPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info);
 	VOID BoundImportPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info);
 	VOID ResourcePack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info);
+
 
 }
 

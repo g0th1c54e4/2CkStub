@@ -471,6 +471,20 @@ _PeFile::_PeFile() {
 	firstSecHdr = 0;
 }
 
+std::vector<PIMAGE_IMPORT_DESCRIPTOR> _PeFile::GetIIDList(){
+	std::vector<PIMAGE_IMPORT_DESCRIPTOR> resultList;
+	PIMAGE_DATA_DIRECTORY dirIat = GetDirByOrder(Dir_Import);
+	DWORD numOfIID = (dirIat->Size - sizeof(IMAGE_IMPORT_DESCRIPTOR)) / sizeof(IMAGE_IMPORT_DESCRIPTOR);
+	PIMAGE_IMPORT_DESCRIPTOR pFirstIID = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD64)this->bufAddr + Rva2Foa(dirIat->VirtualAddress));
+	for (UINT i = 0; i < numOfIID; i++){
+		//CHAR* dllName = (CHAR*)((DWORD64)this->bufAddr + Rva2Foa((pFirstIID + i)->Name));
+
+		resultList.push_back(pFirstIID + i);
+	}
+
+	return resultList;
+}
+
 VOID _PeFile::ClosePeFile(){
 	dosHdr = 0;
 	ntHdr32 = 0;
