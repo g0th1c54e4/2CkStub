@@ -103,6 +103,9 @@ public:
 
 	std::vector<PIMAGE_IMPORT_DESCRIPTOR> GetIIDList(); //获取IID导入表列表
 
+	DWORD RemoveDosStub(); //清除dos存根，将整个PE头往上移动。返回所腾出的空闲字节数(通常是为了增加更多区块头而使用的)
+	
+
 	VOID ClosePeFile();
 	_PeFile();
 	~_PeFile();

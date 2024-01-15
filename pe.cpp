@@ -182,6 +182,7 @@ PIMAGE_SECTION_HEADER _PeFile::GetRelocSec(){
 DWORD _PeFile::Rva2Foa(DWORD RvaValue){
 	switch (fileBit){
 	case Bit32:
+		// 可以判断文件对齐值和内存对齐值是否一致，如果一致则直接返回结果
 		if (RvaValue < ntHdr32->OptionalHeader.SizeOfHeaders) {
 			return RvaValue;
 		}
@@ -193,6 +194,7 @@ DWORD _PeFile::Rva2Foa(DWORD RvaValue){
 		}
 		return 0;
 	case Bit64:
+		// 可以判断文件对齐值和内存对齐值是否一致，如果一致则直接返回结果
 		if (RvaValue < ntHdr64->OptionalHeader.SizeOfHeaders) {
 			return RvaValue;
 		}
@@ -210,6 +212,7 @@ DWORD _PeFile::Rva2Foa(DWORD RvaValue){
 DWORD _PeFile::Foa2Rva(DWORD FoaValue){
 	switch (fileBit){
 	case Bit32:
+		// 可以判断文件对齐值和内存对齐值是否一致，如果一致则直接返回结果
 		if (FoaValue < ntHdr32->OptionalHeader.SizeOfHeaders) {
 			return FoaValue;
 		}
@@ -221,6 +224,7 @@ DWORD _PeFile::Foa2Rva(DWORD FoaValue){
 		}
 		return 0;
 	case Bit64:
+		// 可以判断文件对齐值和内存对齐值是否一致，如果一致则直接返回结果
 		if (FoaValue < ntHdr64->OptionalHeader.SizeOfHeaders) {
 			return FoaValue;
 		}

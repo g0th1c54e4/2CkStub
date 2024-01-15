@@ -181,6 +181,7 @@ namespace Ck2Stub {
 
 	VOID ResourcePack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
 		//任务:保护好原程序的资源不被轻易改动
+		//只保留“图标”、“图标组”、“版本”、“清单文件”，其他资源都要保护
 	}
 
 	VOID CodeProtectPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
