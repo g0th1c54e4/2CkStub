@@ -176,7 +176,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Public\StubInfo_Public.h" />
-    <ClInclude Include="main.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Export.def" />

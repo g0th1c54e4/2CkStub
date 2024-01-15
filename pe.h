@@ -67,6 +67,8 @@ public:
 	//初始化
 	BOOL Init(CHAR* targetFilePath);
 	BOOL Init(WCHAR* targetFilePath);
+
+	PIMAGE_FILE_HEADER GetFileHdr(); //获取文件头
 	
 	std::vector<PIMAGE_SECTION_HEADER> GetSecHdrList(); //获取区块头数组
 	PIMAGE_SECTION_HEADER GetSecHdrByName(CONST CHAR* sectionName); //根据区块名来获取对应区块头
@@ -88,7 +90,7 @@ public:
 
 	VOID DynamicsBaseOff(); //关闭动态基址
 	BOOL AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr, DWORD* newSecReturnFOA); //添加新区块
-	BOOL ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA); //扩充最后一个区块
+	VOID ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA); //扩充最后一个区块
 	
 	VOID SetOep(DWORD oepValue); //设置新的OEP入口点
 	DWORD GetOep(); //获取OEP入口点

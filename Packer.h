@@ -6,6 +6,7 @@
 #include "Public\StubInfo_Public.h"
 
 #define CK2STUB_SECTION_ATTRIB (IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_INITIALIZED_DATA)
+#define CK2STUB_SECTION_ATTRIB_RWE (IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE)
 #define CODE_SECTION_NAME ".ck0"
 #define CODEINFO_SECTION_NAME ".ck1"
 
@@ -22,7 +23,7 @@ namespace Ck2Stub {
 	VOID BoundImportPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info);
 	VOID ResourcePack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info);
 
-
+	VOID CodeProtectPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info);
 }
 
 #endif

@@ -45,6 +45,10 @@ BOOL _PeFile::Init(WCHAR* targetFilePath){
 	return TRUE;
 }
 
+PIMAGE_FILE_HEADER _PeFile::GetFileHdr(){
+	return &(ntHdr32->FileHeader);
+}
+
 BOOL _PeFile::init_checkPeFile(){
 	return (dosHdr->e_magic == IMAGE_DOS_SIGNATURE && ntHdr32->Signature == IMAGE_NT_SIGNATURE);
 }
@@ -391,7 +395,7 @@ BOOL _PeFile::AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecA
 	return TRUE;
 }
 
-BOOL _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA){
+VOID _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA){
 	UINT numOfSec = this->ntHdr32->FileHeader.NumberOfSections;
 
 	PIMAGE_SECTION_HEADER lastSec = &firstSecHdr[numOfSec - 1];
@@ -429,7 +433,6 @@ BOOL _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION
 
 	RtlCopyMemory(secReturnHdr, lastSec, sizeof(IMAGE_SECTION_HEADER));
 	*secReturnFOA = lastSec->PointerToRawData + sizeOfOriginRawData;
-	return TRUE;
 }
 
 VOID _PeFile::SetOep(DWORD oepValue){
