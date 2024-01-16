@@ -5,28 +5,22 @@ BOOL _PeFile::Init(CHAR* targetFilePath){
 	if (this->OpenFile(targetFilePath) == FALSE) {
 		return FALSE;
 	}
-	dosHdr = (PIMAGE_DOS_HEADER)(this->bufAddr);
-	ntHdr32 = (PIMAGE_NT_HEADERS32)((DWORD64)this->bufAddr + dosHdr->e_lfanew);
-	ntHdr64 = (PIMAGE_NT_HEADERS64)((DWORD64)this->bufAddr + dosHdr->e_lfanew);
-	if (init_checkPeFile() == FALSE) {
-		return FALSE;
-	}
-	fileBit = init_judgeBit();
-	switch (fileBit){
-	case Bit32:
-		firstSecHdr = IMAGE_FIRST_SECTION32(ntHdr32);
-		break;
-	case Bit64:
-		firstSecHdr = IMAGE_FIRST_SECTION64(ntHdr64);
-		break;
-	}
-	return TRUE;
+	return init_peHdr();
 }
 
 BOOL _PeFile::Init(WCHAR* targetFilePath){
 	if (this->OpenFile(targetFilePath) == FALSE) {
 		return FALSE;
 	}
+
+	return init_peHdr();
+}
+
+PIMAGE_FILE_HEADER _PeFile::GetFileHdr(){
+	return &(ntHdr32->FileHeader);
+}
+
+BOOL _PeFile::init_peHdr(){
 	dosHdr = (PIMAGE_DOS_HEADER)(this->bufAddr);
 	ntHdr32 = (PIMAGE_NT_HEADERS32)((DWORD64)this->bufAddr + dosHdr->e_lfanew);
 	ntHdr64 = (PIMAGE_NT_HEADERS64)((DWORD64)this->bufAddr + dosHdr->e_lfanew);
@@ -43,10 +37,6 @@ BOOL _PeFile::Init(WCHAR* targetFilePath){
 		break;
 	}
 	return TRUE;
-}
-
-PIMAGE_FILE_HEADER _PeFile::GetFileHdr(){
-	return &(ntHdr32->FileHeader);
 }
 
 BOOL _PeFile::init_checkPeFile(){
@@ -83,21 +73,7 @@ VOID _PeFile::ReSize(DWORD newSize){
 
 	this->ReBufferSize(newSize);
 
-	dosHdr = (PIMAGE_DOS_HEADER)(this->bufAddr);
-	ntHdr32 = (PIMAGE_NT_HEADERS32)((DWORD64)this->bufAddr + dosHdr->e_lfanew);
-	ntHdr64 = (PIMAGE_NT_HEADERS64)((DWORD64)this->bufAddr + dosHdr->e_lfanew);
-	if (init_checkPeFile() == FALSE) {
-		return;
-	}
-	fileBit = init_judgeBit();
-	switch (fileBit) {
-	case Bit32:
-		firstSecHdr = IMAGE_FIRST_SECTION32(ntHdr32);
-		break;
-	case Bit64:
-		firstSecHdr = IMAGE_FIRST_SECTION64(ntHdr64);
-		break;
-	}
+	init_peHdr();
 }
 
 std::vector<PIMAGE_SECTION_HEADER> _PeFile::GetSecHdrList(){
@@ -490,6 +466,28 @@ std::vector<PIMAGE_IMPORT_DESCRIPTOR> _PeFile::GetIIDList(){
 	}
 
 	return resultList;
+}
+
+DWORD _PeFile::RemoveDosStub(){
+	LocalBuf peHdr;
+	LPVOID peHdrAddr = (LPVOID)((DWORD64)this->ntHdr32);
+	LPVOID peHdrFinalAddr = (LPVOID)((DWORD64)(firstSecHdr + (ntHdr32->FileHeader.NumberOfSections + 2)));
+	DWORD peHdrsize = (DWORD64)peHdrFinalAddr - (DWORD64)peHdrAddr;
+	DWORD dosStubSize = ((DWORD64)peHdrAddr - (DWORD64)(dosHdr + 1));
+
+	peHdr.CopyBuffer(peHdrAddr, peHdrsize);
+	RtlCopyMemory((LPVOID)(dosHdr + 1), peHdr.bufAddr, peHdrsize);
+	dosHdr->e_lfanew -= (dosStubSize);
+
+
+	if (init_peHdr() == FALSE) {
+		return 0;
+	}
+
+	RtlZeroMemory((LPVOID)(firstSecHdr + (ntHdr32->FileHeader.NumberOfSections)), dosStubSize);
+
+	peHdr.FreeBuffer();
+	return (dosStubSize);
 }
 
 VOID _PeFile::ClosePeFile(){

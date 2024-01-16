@@ -46,7 +46,8 @@ namespace Ck2Stub {
 
 			cout << "[+] 已关闭SafeSEH保护。" << endl;
 		}
-
+		targetFile.RemoveDosStub();
+		// --------------------------------
 		PIMAGE_SECTION_HEADER pStubCodeSec = stubFile.GetCodeSec();
 
 		IMAGE_SECTION_HEADER newCodeSec = { 0 };

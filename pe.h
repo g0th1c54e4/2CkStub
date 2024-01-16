@@ -42,7 +42,8 @@ enum DirEntryOrder {
 
 typedef class _PeFile : public FileBuf {
 private:
-
+	//初始化pe头信息
+	BOOL init_peHdr();
 	//判断是否为PE文件
 	BOOL init_checkPeFile();
 	//检测PE文件的运行位数(32、64位)
