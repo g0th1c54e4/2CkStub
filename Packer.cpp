@@ -80,7 +80,10 @@ namespace Ck2Stub {
 
 		targetFile.SetOep(newCodeSec.VirtualAddress + stubOepSecOffset);
 
-		SetAllSectionWritable(&targetFile);//设置全部区块可写
+		if (targetFile.GetCheckSum() != 0) { //更新CheckSum
+			targetFile.SetCheckSum(targetFile.CalcCheckSum());
+		}
+
 		if (targetFile.SaveAs(saveFilePath) == FALSE) {
 			targetFile.ClosePeFile();
 			stubFile.ClosePeFile();
@@ -202,13 +205,6 @@ namespace Ck2Stub {
 	DWORD WINAPI GetStubShareInfoOffset(PeFile* stubFile){
 		DWORD funcExportRva = stubFile->GetExportFuncAddrRVA((CHAR*)SHARE_INFO_NAME);
 		return (funcExportRva - stubFile->GetCodeSec()->VirtualAddress);
-	}
-
-	VOID WINAPI SetAllSectionWritable(PeFile* peFile){
-		std::vector<PIMAGE_SECTION_HEADER> SecHdrList = peFile->GetSecHdrList();
-		for (UINT i = 0; i < SecHdrList.size(); i++){
-			SecHdrList[i]->Characteristics |= IMAGE_SCN_MEM_WRITE;
-		}
 	}
 
 }

@@ -13,7 +13,6 @@
 namespace Ck2Stub {
 	DWORD WINAPI GetStubOriginEntryPointOffset(PeFile* stubFile);
 	DWORD WINAPI GetStubShareInfoOffset(PeFile* stubFile);
-	VOID WINAPI SetAllSectionWritable(PeFile* peFile);
 
 	BOOL WINAPI Pack(CHAR* targetFilePath, CHAR* stubFilePath, CHAR* saveFilePath);
 

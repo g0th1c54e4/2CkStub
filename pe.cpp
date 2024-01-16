@@ -446,6 +446,32 @@ DWORD64 _PeFile::GetImageBase(){
 	return 0;
 }
 
+DWORD _PeFile::GetCheckSum(){
+	if (fileBit == Bit32) {
+		return ntHdr32->OptionalHeader.CheckSum;
+	}
+	if (fileBit == Bit64) {
+		return ntHdr64->OptionalHeader.CheckSum;
+	}
+	return 0;
+}
+
+VOID _PeFile::SetCheckSum(DWORD checksumValue){
+	if (fileBit == Bit32) {
+		ntHdr32->OptionalHeader.CheckSum = checksumValue;
+	}
+	if (fileBit == Bit64) {
+		ntHdr64->OptionalHeader.CheckSum = checksumValue;
+	}
+}
+
+DWORD _PeFile::CalcCheckSum(){
+	DWORD checkSum = 0;
+	DWORD headerSum = 0;
+	CheckSumMappedFile(this->bufAddr, this->bufSize, &headerSum, &checkSum);
+	return checkSum;
+}
+
 _PeFile::_PeFile() {
 	dosHdr = 0;
 	ntHdr32 = 0;

@@ -3,6 +3,8 @@
 
 #include <Windows.h>
 #include <vector>
+#include <imagehlp.h>
+#pragma comment(lib, "Imagehlp.lib")
 #include "file.h"
 #include "buf.h"
 
@@ -99,7 +101,7 @@ public:
 	DWORD64 GetImageBase(); //获取映像基址 (32位下请自行将返回值强制转换成DWORD型)
 
 	DWORD GetCheckSum(); //获取当前PE文件的校验和(直接从NT头读取)
-	DWORD SetCheckSum(); //设置当前PE文件的校验和
+	VOID SetCheckSum(DWORD checksumValue); //设置当前PE文件的校验和
 	DWORD CalcCheckSum(); //计算当前PE文件的校验和(输入整个PE文件，计算出准确的校验和)
 
 	std::vector<PIMAGE_IMPORT_DESCRIPTOR> GetIIDList(); //获取IID导入表列表
