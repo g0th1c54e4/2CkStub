@@ -83,6 +83,7 @@ public:
 	BOOL Init(WCHAR* targetFilePath);
 
 	PIMAGE_FILE_HEADER GetFileHdr(); //获取文件头
+	WORD GetSecNum(); //获取区块数量
 	
 	std::vector<PIMAGE_SECTION_HEADER> GetSecHdrList(); //获取区块头数组
 	PIMAGE_SECTION_HEADER GetSecHdrByName(CONST CHAR* sectionName); //根据区块名来获取对应区块头
@@ -100,7 +101,7 @@ public:
 
 	PIMAGE_DATA_DIRECTORY GetDirByOrder(DirEntryOrder dirOrder); //获取特定数据目录表
 	VOID RemoveDebugInfo(); //清除调试数据目录表信息(参数removeData表示是否清除数据目录所具体引用的数据)
-	VOID RemoveExportInfo(); //清除导出数据目录表信息(参数removeData表示是否清除数据目录所具体引用的数据)
+	//VOID RemoveExportInfo(); //清除导出数据目录表信息(参数removeData表示是否清除数据目录所具体引用的数据)
 
 	VOID DynamicsBaseOff(); //关闭动态基址
 	BOOL AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr = NULL, DWORD* newSecReturnFOA = NULL, DWORD* newSecReturnRVA = NULL); //添加新区块

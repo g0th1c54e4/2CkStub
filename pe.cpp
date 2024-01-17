@@ -20,6 +20,10 @@ PIMAGE_FILE_HEADER _PeFile::GetFileHdr(){
 	return &(ntHdr32->FileHeader);
 }
 
+WORD _PeFile::GetSecNum(){
+	return ntHdr32->FileHeader.NumberOfSections;
+}
+
 BOOL _PeFile::init_peHdr(){
 	dosHdr = (PIMAGE_DOS_HEADER)(this->bufAddr);
 	ntHdr32 = (PIMAGE_NT_HEADERS32)((DWORD64)this->bufAddr + dosHdr->e_lfanew);
@@ -44,11 +48,11 @@ BOOL _PeFile::init_checkPeFile(){
 }
 
 FileBit _PeFile::init_judgeBit(){  // 1 ==> 64Bit、0 ==> 32Bit
-	if ((ntHdr32->FileHeader.Characteristics & IMAGE_FILE_32BIT_MACHINE) == 0) {
-		return Bit64;
-	}
-	else {
+	if (ntHdr32->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR32_MAGIC) {
 		return Bit32;
+	}
+	else if (ntHdr32->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
+		return Bit64;
 	}
 }
 
@@ -292,14 +296,14 @@ VOID _PeFile::RemoveDebugInfo() {
 	RtlZeroMemory(pDebug, dirDebug->Size);
 }
 
-VOID _PeFile::RemoveExportInfo(){
-	PIMAGE_DATA_DIRECTORY dirExport = GetDirByOrder(Dir_Export);
-	if (dirExport->VirtualAddress == 0 || dirExport->Size == 0) {
-		return;
-	}
-	PIMAGE_EXPORT_DIRECTORY pExport = (PIMAGE_EXPORT_DIRECTORY)((DWORD64)this->bufAddr + Rva2Foa(dirExport->VirtualAddress));
-	RtlZeroMemory(pExport, dirExport->Size);
-}
+//VOID _PeFile::RemoveExportInfo(){
+//	PIMAGE_DATA_DIRECTORY dirExport = GetDirByOrder(Dir_Export);
+//	if (dirExport->VirtualAddress == 0 || dirExport->Size == 0) {
+//		return;
+//	}
+//	PIMAGE_EXPORT_DIRECTORY pExport = (PIMAGE_EXPORT_DIRECTORY)((DWORD64)this->bufAddr + Rva2Foa(dirExport->VirtualAddress));
+//	RtlZeroMemory(pExport, dirExport->Size);
+//}
 
 VOID _PeFile::DynamicsBaseOff(){
 	if (fileBit == Bit32) {
@@ -342,11 +346,9 @@ BOOL _PeFile::AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecA
 	ntHdr32->FileHeader.NumberOfSections += 1;
 
 	if (fileBit == Bit32) {
-		//ntHdr32->OptionalHeader.SizeOfHeaders += sizeof(IMAGE_SECTION_HEADER); //可能不需要? 以后取消这个注释再看看效果
 		ntHdr32->OptionalHeader.SizeOfImage += AlignSection(sec.SizeOfRawData);
 	}
 	if (fileBit == Bit64) {
-		//ntHdr64->OptionalHeader.SizeOfHeaders += sizeof(IMAGE_SECTION_HEADER); //可能不需要? 以后取消这个注释再看看效果
 		ntHdr64->OptionalHeader.SizeOfImage += AlignSection(sec.SizeOfRawData);
 	}
 
@@ -366,8 +368,8 @@ BOOL _PeFile::AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecA
 	}
 	addData.FreeBuffer();
 
-	if (GetDirByOrder(Dir_Security)->VirtualAddress == sec.PointerToRawData) {
-		GetDirByOrder(Dir_Security)->VirtualAddress = sec.PointerToRawData + sec.SizeOfRawData;
+	if (GetDirByOrder(Dir_Security)->VirtualAddress != 0) {
+		GetDirByOrder(Dir_Security)->VirtualAddress += AlignFile(newSecSize);
 	}
 
 	if (newSecReturnHdr != NULL) {
@@ -414,8 +416,8 @@ VOID _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION
 	}
 	addData.FreeBuffer();
 
-	if (GetDirByOrder(Dir_Security)->VirtualAddress == lastSec->PointerToRawData + sizeOfOriginRawData) {
-		GetDirByOrder(Dir_Security)->VirtualAddress = lastSec->PointerToRawData + lastSec->SizeOfRawData;
+	if (GetDirByOrder(Dir_Security)->VirtualAddress != 0) {
+		GetDirByOrder(Dir_Security)->VirtualAddress += AlignFile(addSize);
 	}
 
 	if (secReturnHdr != NULL) {

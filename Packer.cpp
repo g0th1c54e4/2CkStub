@@ -37,6 +37,8 @@ namespace Ck2Stub {
 			cout << "[+] 已关闭SafeSEH保护。" << endl;
 		}
 		targetFile.RemoveDosStub();
+		stubFile.RemoveDebugInfo();
+		WORD originSecNum = targetFile.GetSecNum();
 		// --------------------------------
 		PIMAGE_SECTION_HEADER pStubCodeSec = stubFile.GetCodeSec();
 
@@ -67,22 +69,18 @@ namespace Ck2Stub {
 
 		LPVOID shareInfoAddr = (LPVOID)((DWORD64)targetFile.bufAddr + targetFile.Rva2Foa(newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile)));//本地PE文件的share_info的对应地址
 		share_info.ImageBaseOffset = newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile);
-		share_info.ImageBase = targetFile.GetImageBase();
 		RtlCopyMemory(shareInfoAddr, &share_info, sizeof(SHARE_INFO)); //上传share_info
 
 		targetFile.SetOep(newCodeSec.VirtualAddress + stubOepSecOffset);
-
-		if (targetFile.GetCheckSum() != 0) { //更新CheckSum
-			targetFile.SetCheckSum(targetFile.CalcCheckSum());
-		}
+		RemoveSectionName(&targetFile, originSecNum);
+		UpdataChecksum(&targetFile);
 
 		if (targetFile.SaveAs(saveFilePath) == FALSE) {
 			targetFile.ClosePeFile();
 			stubFile.ClosePeFile();
 			return FALSE;
 		}
-		targetFile.RemoveDebugInfo();
-		targetFile.RemoveExportInfo();
+
 
 		targetFile.ClosePeFile();
 		stubFile.ClosePeFile();
@@ -117,16 +115,6 @@ namespace Ck2Stub {
 				continue;
 			}
 		}
-		//利用重定位修复ImageBase
-		Base_reloc_sec imagebase_relocSec = { 0 };
-		DWORD shareInfoRva = (targetFile->GetSecHdrByName(CODE_SECTION_NAME)->VirtualAddress + GetStubShareInfoOffset(stubFile)) + 16; //12是结构体中imagebase的偏移量
-		imagebase_relocSec.VirtualAddress = (shareInfoRva & 0xFFFFF000);
-		imagebase_relocSec.SizeOfBlock = sizeof(IMAGE_BASE_RELOCATION) + (sizeof(Type_Offset) * 1);
-		Type_Offset imagebase_relocTypeOffset = { 0 };
-		imagebase_relocTypeOffset.type = IMAGE_REL_BASED_HIGHLOW;
-		imagebase_relocTypeOffset.offset = (shareInfoRva & 0x00000FFF);
-		imagebase_relocSec.TypeOffsetArray.push_back(imagebase_relocTypeOffset);
-		stubRelocInfo.push_back(imagebase_relocSec);
 
 		LocalBuf relocBuf;
 		DWORD relocBufSize = stubFile->RelocInfo2Buf(&stubRelocInfo, &relocBuf);
@@ -166,6 +154,19 @@ namespace Ck2Stub {
 	VOID CodeProtectPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
 		//采用和vmp一样的做法，将区块头的raw信息删除掉，之后再将原区块的数据解密后再写回到原来的区块区域内
 
+
+	}
+
+	VOID RemoveSectionName(PeFile* stubFile, WORD secNum){
+		for (UINT i = 0; i < secNum; i++) {
+			RtlZeroMemory(stubFile->firstSecHdr[i].Name, 7);
+		}
+	}
+
+	VOID UpdataChecksum(PeFile* stubFile){ //更新CheckSum
+		if (stubFile->GetCheckSum() != 0) { 
+			stubFile->SetCheckSum(stubFile->CalcCheckSum());
+		}
 	}
 
 	DWORD WINAPI GetStubOriginEntryPointOffset(PeFile* stubFile){

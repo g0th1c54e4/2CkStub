@@ -29,6 +29,8 @@ namespace Ck2Stub {
 	VOID ResourcePack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info);
 	VOID CodeProtectPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info);
 
+	VOID RemoveSectionName(PeFile* stubFile, WORD secNum);
+	VOID UpdataChecksum(PeFile* stubFile);
 }
 
 #endif
