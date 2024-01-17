@@ -8,10 +8,7 @@ using std::endl;
 namespace Ck2Stub {
 	BOOL WINAPI Pack(CHAR* targetFilePath, CHAR* stubFilePath, CHAR* saveFilePath) {
 		PeFile targetFile, stubFile;
-		if (targetFile.Init(targetFilePath) == FALSE) {
-			return FALSE;
-		}
-		if (stubFile.Init(stubFilePath) == FALSE) {
+		if (targetFile.Init(targetFilePath) == FALSE || stubFile.Init(stubFilePath) == FALSE) {
 			return FALSE;
 		}
 		if (targetFile.fileBit != stubFile.fileBit) {
@@ -29,13 +26,6 @@ namespace Ck2Stub {
 			stubFile.ClosePeFile();
 			return FALSE;
 		}
-
-		//if (targetFile.GetDirByOrder(Dir_Security)->VirtualAddress != 0) {
-		//	cout << "[-] 此程序携带有数字签名。" << endl;
-		//	targetFile.ClosePeFile();
-		//	stubFile.ClosePeFile();
-		//	return FALSE;
-		//}
 		
 		if (targetFile.GetDirByOrder(Dir_LoadConfig)->VirtualAddress != 0) { //关闭SafeSEH保护为后续LVMProtectA的开发作基础
 			PIMAGE_DATA_DIRECTORY loadConfigDir = targetFile.GetDirByOrder(Dir_LoadConfig);
@@ -52,7 +42,7 @@ namespace Ck2Stub {
 
 		IMAGE_SECTION_HEADER newCodeSec = { 0 };
 		DWORD newCodeSecAddrFoa = 0;
-		targetFile.AddSection(CODE_SECTION_NAME, pStubCodeSec->SizeOfRawData, CK2STUB_SECTION_ATTRIB, &newCodeSec, &newCodeSecAddrFoa);
+		targetFile.AddSection(CODE_SECTION_NAME, pStubCodeSec->SizeOfRawData, _SEC_CODE | SEC_ATTRIB_RWE, &newCodeSec, &newCodeSecAddrFoa);
 		RtlCopyMemory((LPVOID)((DWORD64)targetFile.bufAddr + newCodeSecAddrFoa), (LPVOID)((DWORD64)stubFile.bufAddr + pStubCodeSec->PointerToRawData), pStubCodeSec->SizeOfRawData);
 
 		SHARE_INFO share_info = { 0 };
@@ -61,7 +51,8 @@ namespace Ck2Stub {
 
 		//TODO LVMProtect
 
-		RelocPack(&targetFile, &stubFile, &share_info);
+		targetFile.AddSection(CODEINFO_SECTION_NAME, 0, SEC_ATTRIB_RWE);
+		RelocPack(&targetFile, &stubFile, &share_info); //ERROR：数字签名数据没了
 		cout << "[+] 已处理重定位信息。" << endl;
 		
 		//TlsPack(&targetFile, &stubFile, &share_info);
@@ -76,6 +67,7 @@ namespace Ck2Stub {
 
 		LPVOID shareInfoAddr = (LPVOID)((DWORD64)targetFile.bufAddr + targetFile.Rva2Foa(newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile)));//本地PE文件的share_info的对应地址
 		share_info.ImageBaseOffset = newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile);
+		share_info.ImageBase = targetFile.GetImageBase();
 		RtlCopyMemory(shareInfoAddr, &share_info, sizeof(SHARE_INFO)); //上传share_info
 
 		targetFile.SetOep(newCodeSec.VirtualAddress + stubOepSecOffset);
@@ -109,73 +101,56 @@ namespace Ck2Stub {
 		//RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newImportSecAddrFoa), (LPVOID)((DWORD64)stubFile->bufAddr + stubFile->Rva2Foa(stubImport->VirtualAddress)),stubImport->SizeOfRawData);
 
 		//关于Iat，必须要完成两个任务
-		//1.将Stub自身的导入表换到原程序上
+		//1.将Stub自身的导入表附加到原程序上
 		//2.保护好原程序的导入表(可以参考吾爱、看雪论坛上的关于IAT加密的帖子来学习)
 	}
-
 	VOID RelocPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
-		PIMAGE_SECTION_HEADER stubRelocSec = stubFile->GetRelocSec();
-		if (stubRelocSec == 0) {
-			return;
-		}
 		PIMAGE_SECTION_HEADER stubCodeSec = stubFile->GetCodeSec();
-		IMAGE_SECTION_HEADER newRelocSec = { 0 };
-		DWORD newRelocSecAddrFoa = 0;
-		targetFile->AddSection(CODEINFO_SECTION_NAME, stubRelocSec->SizeOfRawData, CK2STUB_SECTION_ATTRIB, &newRelocSec, &newRelocSecAddrFoa);
-		RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newRelocSecAddrFoa), (LPVOID)((DWORD64)stubFile->bufAddr + stubRelocSec->PointerToRawData), stubRelocSec->SizeOfRawData);
-		
-		PIMAGE_BASE_RELOCATION pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)targetFile->bufAddr + newRelocSecAddrFoa);
-
-		DWORD relocSize = 0;
 		PIMAGE_SECTION_HEADER codeSec = targetFile->GetSecHdrByName(CODE_SECTION_NAME);
-		while (pReloc->VirtualAddress != 0 && pReloc->SizeOfBlock != 0) {
-			if ((pReloc->VirtualAddress >= stubCodeSec->VirtualAddress) && (pReloc->VirtualAddress <= (stubCodeSec->VirtualAddress + stubCodeSec->Misc.VirtualSize))) {
-				// Code区域
-				pReloc->VirtualAddress -= stubCodeSec->VirtualAddress;
-				pReloc->VirtualAddress += codeSec->VirtualAddress;
-
-				struct TypeOffset {
-					WORD offset : 12;
-					WORD type : 4;
-				};
-				TypeOffset* pTypeOffs = (TypeOffset*)(pReloc + 1);
-				DWORD dwCount = (pReloc->SizeOfBlock - 8) / 2;
-				for (UINT i = 0; i < dwCount; i++) {
-					if (pTypeOffs[i].type != IMAGE_REL_BASED_HIGHLOW) {
-						continue;
-					}
-					PDWORD pdwRepairAddr = (PDWORD)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(pReloc->VirtualAddress + pTypeOffs[i].offset));
-					if (stubFile->GetSecHdrByRva((*pdwRepairAddr) - (DWORD)stubFile->GetImageBase()) == stubCodeSec){ //只修复指向.text区域的数据，与上面的判断不同
-						*pdwRepairAddr -= (DWORD)stubFile->GetImageBase();
-						*pdwRepairAddr -= stubCodeSec->VirtualAddress;
-						*pdwRepairAddr += (DWORD)targetFile->GetImageBase();
-						*pdwRepairAddr += codeSec->VirtualAddress;
-					}
-					//else { //设置重定位属性为不可修复
-					//	pTypeOffs[i].type = IMAGE_REL_ALPHA_ABSOLUTE;
-					//	continue;
-					//}
-				}
-
-				relocSize += pReloc->SizeOfBlock;
+		std::vector<Base_reloc_sec> stubRelocInfo = stubFile->GetRelocInfo();
+		for (UINT i = 0; i < stubRelocInfo.size(); i++){
+			if ((stubRelocInfo[i].VirtualAddress >= stubCodeSec->VirtualAddress) && (stubRelocInfo[i].VirtualAddress <= (stubCodeSec->VirtualAddress + stubCodeSec->Misc.VirtualSize))) {
+				stubRelocInfo[i].VirtualAddress += codeSec->VirtualAddress - stubCodeSec->VirtualAddress;
 			}
 			else {
-				// 非Code区域
-				DWORD sizeOfRelocBlock = pReloc->SizeOfBlock;
-				RtlZeroMemory(pReloc, sizeOfRelocBlock);
-				pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)pReloc + sizeOfRelocBlock);
+				stubRelocInfo.erase(stubRelocInfo.begin() + i);
 				continue;
 			}
-			pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)pReloc + pReloc->SizeOfBlock);
 		}
+		//利用重定位修复ImageBase
+		Base_reloc_sec imagebase_relocSec = { 0 };
+		DWORD shareInfoRva = (targetFile->GetSecHdrByName(CODE_SECTION_NAME)->VirtualAddress + GetStubShareInfoOffset(stubFile)) + 16; //12是结构体中imagebase的偏移量
+		imagebase_relocSec.VirtualAddress = (shareInfoRva & 0xFFFFF000);
+		imagebase_relocSec.SizeOfBlock = sizeof(IMAGE_BASE_RELOCATION) + (sizeof(Type_Offset) * 1);
+		Type_Offset imagebase_relocTypeOffset = { 0 };
+		imagebase_relocTypeOffset.type = IMAGE_REL_BASED_HIGHLOW;
+		imagebase_relocTypeOffset.offset = (shareInfoRva & 0x00000FFF);
+		imagebase_relocSec.TypeOffsetArray.push_back(imagebase_relocTypeOffset);
+		stubRelocInfo.push_back(imagebase_relocSec);
 
+		LocalBuf relocBuf;
+		DWORD relocBufSize = stubFile->RelocInfo2Buf(&stubRelocInfo, &relocBuf);
+
+		IMAGE_SECTION_HEADER newRelocSec = { 0 };
+		DWORD newRelocSecAddrFoa = 0, newRelocSecAddrRva = 0;
+		targetFile->ExtendLastSection(relocBufSize, SEC_ATTRIB_RWE, &newRelocSec, &newRelocSecAddrFoa, &newRelocSecAddrRva);
+		RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newRelocSecAddrFoa), relocBuf.bufAddr, relocBufSize);
+		
+		codeSec = targetFile->GetSecHdrByName(CODE_SECTION_NAME);
+		PIMAGE_BASE_RELOCATION pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)targetFile->bufAddr + newRelocSecAddrFoa);
+
+		DWORD diffValue = (DWORD)targetFile->GetImageBase() + codeSec->VirtualAddress - (DWORD)stubFile->GetImageBase() - stubCodeSec->VirtualAddress;
+		targetFile->RepairReloc(newRelocSecAddrFoa, diffValue);
+		
 		PIMAGE_DATA_DIRECTORY dirReloc = targetFile->GetDirByOrder(Dir_BaseReloc);
 		share_info->Reloc.RvaAddr = dirReloc->VirtualAddress;
 		share_info->Reloc.Size = dirReloc->Size;
-		dirReloc->VirtualAddress = newRelocSec.VirtualAddress;
-		dirReloc->Size = relocSize;
-		
+		dirReloc->VirtualAddress = newRelocSecAddrRva;
+		dirReloc->Size = relocBufSize;
+
 		targetFile->GetFileHdr()->Characteristics &= ~(IMAGE_FILE_RELOCS_STRIPPED);
+
+		relocBuf.FreeBuffer();
 	}
 
 	VOID BoundImportPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
@@ -189,7 +164,7 @@ namespace Ck2Stub {
 	}
 
 	VOID CodeProtectPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
-
+		//采用和vmp一样的做法，将区块头的raw信息删除掉，之后再将原区块的数据解密后再写回到原来的区块区域内
 
 	}
 

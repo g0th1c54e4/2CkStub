@@ -8,6 +8,17 @@
 #include "file.h"
 #include "buf.h"
 
+typedef struct _Type_Offset {
+	WORD offset : 12;
+	WORD type : 4;
+}Type_Offset;
+
+typedef struct _Base_reloc_sec {
+	DWORD VirtualAddress;
+	DWORD SizeOfBlock;
+	std::vector<Type_Offset> TypeOffsetArray;
+}Base_reloc_sec;
+
 enum FileBit { 
 	Bit32 = 0,
 	Bit64 = 1 
@@ -92,8 +103,8 @@ public:
 	VOID RemoveExportInfo(); //清除导出数据目录表信息(参数removeData表示是否清除数据目录所具体引用的数据)
 
 	VOID DynamicsBaseOff(); //关闭动态基址
-	BOOL AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr, DWORD* newSecReturnFOA); //添加新区块
-	VOID ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA); //扩充最后一个区块
+	BOOL AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr = NULL, DWORD* newSecReturnFOA = NULL, DWORD* newSecReturnRVA = NULL); //添加新区块
+	VOID ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr = NULL, DWORD* secReturnFOA = NULL, DWORD* secReturnRVA = NULL); //扩充最后一个区块
 	
 	VOID SetOep(DWORD oepValue); //设置新的OEP入口点
 	DWORD GetOep(); //获取OEP入口点
@@ -106,8 +117,11 @@ public:
 
 	std::vector<PIMAGE_IMPORT_DESCRIPTOR> GetIIDList(); //获取IID导入表列表
 
-	DWORD RemoveDosStub(); //清除dos存根，将整个PE头往上移动。返回所腾出的空闲字节数(通常是为了增加更多区块头而使用的)
+	DWORD RemoveDosStub(); //清除Dos存根，将整个PE头往上移动。返回所腾出的空闲字节数(通常是为了增加更多区块头而使用的)
 	
+	std::vector<Base_reloc_sec> GetRelocInfo(); //将PE文件内的重定位表数据转换成可灵活处理的重定位信息数组
+	DWORD RelocInfo2Buf(std::vector<Base_reloc_sec>* inRelocInfo, LocalBuf* outRelocInfoBuf); //将重定位信息数组转换成重定位表数据。返回Buffer的大小(outRelocInfoBuf必须是未初始化的状态)
+	VOID RepairReloc(DWORD relocBaseFoaAddr, DWORD diffValue); //修复重定位
 
 	VOID ClosePeFile();
 	_PeFile();

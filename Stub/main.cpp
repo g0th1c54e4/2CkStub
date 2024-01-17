@@ -20,17 +20,21 @@ DWORD imageBase = 0;
 
 VOID WINAPI StubInit() {
 	//修正映像基址
-	#ifdef _WIN64
-	imageBase = ((DWORD64)&share_info - share_info.ImageBaseOffset);
-	share_info.OriginEntryPoint += imageBase;
-	#else
-	imageBase = ((DWORD)&share_info - share_info.ImageBaseOffset);
-	share_info.OriginEntryPoint += imageBase;
-	#endif
+	//#ifdef _WIN64
+	//imageBase = ((DWORD64)&share_info - share_info.ImageBaseOffset);
+	//share_info.OriginEntryPoint += imageBase;
+	//#else
+	//imageBase = ((DWORD)&share_info - share_info.ImageBaseOffset);
+	//share_info.OriginEntryPoint += imageBase;
+	//#endif
+
+#ifdef _WIN64
+	share_info.OriginEntryPoint += share_info.ImageBase;
+#else
+	share_info.OriginEntryPoint += share_info.ImageBase;
+#endif
 
 	//修正重定位表
-
-
 }
 
 #ifndef _WIN64

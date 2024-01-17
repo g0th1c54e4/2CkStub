@@ -320,7 +320,7 @@ VOID _PeFile::DynamicsBaseOff(){
 	}
 }
 
-BOOL _PeFile::AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr, DWORD* newSecReturnFOA){
+BOOL _PeFile::AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr, DWORD* newSecReturnFOA, DWORD* newSecReturnRVA){
 	
 	if (CheckSecTabSpace(1) == FALSE) {
 		return FALSE;
@@ -370,12 +370,19 @@ BOOL _PeFile::AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecA
 		GetDirByOrder(Dir_Security)->VirtualAddress = sec.PointerToRawData + sec.SizeOfRawData;
 	}
 
-	RtlCopyMemory(newSecReturnHdr, &sec, sizeof(IMAGE_SECTION_HEADER));
-	*newSecReturnFOA = sec.PointerToRawData;
+	if (newSecReturnHdr != NULL) {
+		RtlCopyMemory(newSecReturnHdr, &sec, sizeof(IMAGE_SECTION_HEADER));
+	}
+	if (newSecReturnFOA != NULL) {
+		*newSecReturnFOA = sec.PointerToRawData;
+	}
+	if (newSecReturnRVA != NULL) {
+		*newSecReturnRVA = sec.VirtualAddress;
+	}
 	return TRUE;
 }
 
-VOID _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA){
+VOID _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA, DWORD* secReturnRVA){
 	UINT numOfSec = this->ntHdr32->FileHeader.NumberOfSections;
 
 	PIMAGE_SECTION_HEADER lastSec = &firstSecHdr[numOfSec - 1];
@@ -393,14 +400,14 @@ VOID _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION
 	}
 	
 	LocalBuf addData;
-	LPVOID newBufAddr = (LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + sizeOfOriginRawData);
+	LPVOID newBufAddr = (LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + sizeOfOriginRawData); //重新计算
 	if (sizeOfAddData > 0) {
-		addData.CopyBuffer((LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + lastSec->SizeOfRawData), sizeOfAddData); //保存附加数据
+		addData.CopyBuffer(newBufAddr, sizeOfAddData); //保存附加数据
 	}
 
 	ReSize(this->bufSize + AlignFile(addSize));
 	lastSec = &firstSecHdr[numOfSec - 1];
-	newBufAddr = (LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + sizeOfOriginRawData); //BufAddr 需要重新计算
+	newBufAddr = (LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + sizeOfOriginRawData);
 	RtlZeroMemory(newBufAddr, AlignFile(addSize));
 	if (sizeOfAddData > 0) {
 		RtlCopyMemory((LPVOID)((DWORD64)this->bufAddr + lastSec->PointerToRawData + lastSec->SizeOfRawData), addData.bufAddr, sizeOfAddData); //追加附加数据
@@ -411,8 +418,15 @@ VOID _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION
 		GetDirByOrder(Dir_Security)->VirtualAddress = lastSec->PointerToRawData + lastSec->SizeOfRawData;
 	}
 
-	RtlCopyMemory(secReturnHdr, lastSec, sizeof(IMAGE_SECTION_HEADER));
-	*secReturnFOA = lastSec->PointerToRawData + sizeOfOriginRawData;
+	if (secReturnHdr != NULL) {
+		RtlCopyMemory(secReturnHdr, lastSec, sizeof(IMAGE_SECTION_HEADER));
+	}
+	if (secReturnFOA != NULL) {
+		*secReturnFOA = lastSec->PointerToRawData + sizeOfOriginRawData;
+	}
+	if (secReturnRVA != NULL) {
+		*secReturnRVA = lastSec->VirtualAddress + sizeOfOriginRawData;
+	}
 }
 
 VOID _PeFile::SetOep(DWORD oepValue){
@@ -514,6 +528,70 @@ DWORD _PeFile::RemoveDosStub(){
 
 	peHdr.FreeBuffer();
 	return (dosStubSize);
+}
+
+std::vector<Base_reloc_sec> _PeFile::GetRelocInfo(){
+	std::vector<Base_reloc_sec> baseRelocSecArr;
+	PIMAGE_DATA_DIRECTORY pRelocDir = this->GetDirByOrder(Dir_BaseReloc);
+	PIMAGE_BASE_RELOCATION pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)this->bufAddr + Rva2Foa(pRelocDir->VirtualAddress));
+	while (pReloc->VirtualAddress != 0 && pReloc->SizeOfBlock != 0) {
+		Type_Offset* pTypeOffs = (Type_Offset*)(pReloc + 1);
+		Base_reloc_sec baseRelocSec = { 0 };
+		baseRelocSec.VirtualAddress = pReloc->VirtualAddress;
+		baseRelocSec.SizeOfBlock = pReloc->SizeOfBlock;
+		DWORD dwCount = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(Type_Offset);
+		for (UINT i = 0; i < dwCount; i++) {
+			baseRelocSec.TypeOffsetArray.push_back(*(pTypeOffs + i));
+		}
+		baseRelocSecArr.push_back(baseRelocSec);
+		pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)pReloc + pReloc->SizeOfBlock);
+	}
+
+	return baseRelocSecArr;
+}
+
+DWORD _PeFile::RelocInfo2Buf(std::vector<Base_reloc_sec>* inRelocInfo, LocalBuf* outRelocInfoBuf){
+	DWORD relocTabize = ((inRelocInfo->size() + 1) * sizeof(IMAGE_BASE_RELOCATION));
+	for (UINT i = 0; i < inRelocInfo->size(); i++){
+		relocTabize += ((*inRelocInfo)[i]).SizeOfBlock;
+	}
+	outRelocInfoBuf->CreateBuffer(relocTabize);
+	DWORD writePoint = 0;
+	for (UINT i = 0; i < inRelocInfo->size(); i++){
+		IMAGE_BASE_RELOCATION baseReloc = { 0 };
+		baseReloc.VirtualAddress = ((*inRelocInfo)[i]).VirtualAddress;
+		baseReloc.SizeOfBlock = ((*inRelocInfo)[i]).SizeOfBlock;
+		RtlCopyMemory((LPVOID)((DWORD64)outRelocInfoBuf->bufAddr + writePoint), &baseReloc, sizeof(IMAGE_BASE_RELOCATION));
+		writePoint += sizeof(IMAGE_BASE_RELOCATION);
+
+		for (UINT j = 0; j < ((*inRelocInfo)[i]).TypeOffsetArray.size(); j++){
+			WORD typeOffset = 0;
+			typeOffset |= ((*inRelocInfo)[i]).TypeOffsetArray[j].offset;
+			typeOffset |= ((((*inRelocInfo)[i]).TypeOffsetArray[j].type) << 12);
+			RtlCopyMemory((LPVOID)((DWORD64)outRelocInfoBuf->bufAddr + writePoint), &typeOffset, sizeof(WORD));
+			writePoint += sizeof(WORD);
+		}
+	}
+	RtlZeroMemory((LPVOID)((DWORD64)outRelocInfoBuf->bufAddr + writePoint), sizeof(IMAGE_BASE_RELOCATION)); //此句代码用于截断重定位块项数组
+
+	return relocTabize;
+}
+
+VOID _PeFile::RepairReloc(DWORD relocBaseFoaAddr, DWORD diffValue){
+	PIMAGE_BASE_RELOCATION pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)this->bufAddr + relocBaseFoaAddr);
+
+	while (pReloc->VirtualAddress != 0 && pReloc->SizeOfBlock != 0) {
+		Type_Offset* pTypeOffs = (Type_Offset*)(pReloc + 1);
+		DWORD dwCount = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(Type_Offset);
+		for (UINT i = 0; i < dwCount; i++) {
+			if (pTypeOffs[i].type != IMAGE_REL_BASED_HIGHLOW) {
+				continue;
+			}
+			PDWORD pdwRepairAddr = (PDWORD)((DWORD64)this->bufAddr + this->Rva2Foa(pReloc->VirtualAddress + pTypeOffs[i].offset));
+			*pdwRepairAddr += diffValue;
+		}
+		pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)pReloc + pReloc->SizeOfBlock);
+	}
 }
 
 VOID _PeFile::ClosePeFile(){

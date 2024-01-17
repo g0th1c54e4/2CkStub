@@ -15,6 +15,7 @@ typedef struct _SHARE_INFO {
 
 	//用于计算当前模块的基址
 	DWORD ImageBaseOffset;
+	DWORD64 ImageBase;
 
 	//原程序的代码区域位置
 	AREA OriginCode;
