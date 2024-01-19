@@ -114,6 +114,7 @@
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <CallingConvention>StdCall</CallingConvention>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -156,6 +157,7 @@
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <CallingConvention>StdCall</CallingConvention>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -172,10 +174,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="basic.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="pe.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Public\StubInfo_Public.h" />
+    <ClInclude Include="basic.h" />
+    <ClInclude Include="pe.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Export.def" />

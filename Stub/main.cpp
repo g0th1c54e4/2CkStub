@@ -1,5 +1,6 @@
 #include <Windows.h>
 #include "../Public/StubInfo_Public.h"
+#include "pe.h"
 
 #ifdef _WIN64
 extern "C" {
@@ -22,13 +23,26 @@ VOID WINAPI StubInit() {
 	//修正映像基址
 	#ifdef _WIN64
 	imageBase = ((DWORD64)&share_info - share_info.ImageBaseOffset);
-	share_info.OriginEntryPoint += imageBase;
 	#else
 	imageBase = ((DWORD)&share_info - share_info.ImageBaseOffset);
-	share_info.OriginEntryPoint += imageBase;
 	#endif
+	share_info.OriginEntryPoint += imageBase;
 
-	//修正重定位表
+	//TODO:初始化API函数 (利用IAT的GetProcAddress和LoadLibraryA来获取函数地址，以及用VirtualProtect打开权限)
+
+	//TODO:恢复原始区块数据(需要Write权限)
+
+	//修正重定位表(需要Write权限)
+	if (share_info.Reloc.RvaAddr != 0) {
+		RepairReloc((LPVOID)imageBase, share_info.Reloc.RvaAddr, share_info.OldImageBase, imageBase);
+	}
+
+	//TODO:修正IAT表(需要Write权限)
+
+	//TODO:处理TLS
+
+	//TODO:恢复资源(需要Write权限)
+
 }
 
 #ifndef _WIN64
@@ -36,7 +50,7 @@ _declspec(naked)
 VOID WINAPI StubEntry() {
 	StubInit();
 	_asm {
-		jmp share_info.OriginEntryPoint //需要基址
+		jmp dword ptr ds:[share_info.OriginEntryPoint] //需要基址
 	}
 }
 #endif

@@ -5,15 +5,8 @@
 #include "pe.h"
 #include "Public\StubInfo_Public.h"
 
-#define _SEC_READ IMAGE_SCN_MEM_READ
-#define _SEC_WRITE IMAGE_SCN_MEM_WRITE
-#define _SEC_EXEC IMAGE_SCN_MEM_EXECUTE
-#define _SEC_CODE IMAGE_SCN_CNT_CODE
-#define _SEC_INITDATA IMAGE_SCN_CNT_INITIALIZED_DATA
-#define SEC_ATTRIB_RWE (IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE)
-
-#define CODE_SECTION_NAME ".ck0"
-#define CODEINFO_SECTION_NAME ".ck1"
+#define CODE_SECTION_NAME "CK0"
+#define CODEINFO_SECTION_NAME "CK1"
 
 namespace Ck2Stub {
 	DWORD WINAPI GetStubOriginEntryPointOffset(PeFile* stubFile);

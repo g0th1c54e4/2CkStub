@@ -26,7 +26,12 @@ namespace Ck2Stub {
 			stubFile.ClosePeFile();
 			return FALSE;
 		}
-		
+		if (targetFile.GetDirByOrder(Dir_Exception)->VirtualAddress != 0) {
+			cout << "[-] 此程序含有异常处理单元，无法加壳。" << endl;
+			targetFile.ClosePeFile();
+			stubFile.ClosePeFile();
+			return FALSE;
+		}
 		if (targetFile.GetDirByOrder(Dir_LoadConfig)->VirtualAddress != 0) { //关闭SafeSEH保护为后续LVMProtectA的开发作基础
 			PIMAGE_DATA_DIRECTORY loadConfigDir = targetFile.GetDirByOrder(Dir_LoadConfig);
 			LPVOID loadConfigMemAddr = (LPVOID)((DWORD64)targetFile.bufAddr + targetFile.Rva2Foa(loadConfigDir->VirtualAddress));
@@ -44,7 +49,7 @@ namespace Ck2Stub {
 
 		IMAGE_SECTION_HEADER newCodeSec = { 0 };
 		DWORD newCodeSecAddrFoa = 0;
-		targetFile.AddSection(CODE_SECTION_NAME, pStubCodeSec->SizeOfRawData, _SEC_CODE | SEC_ATTRIB_RWE, &newCodeSec, &newCodeSecAddrFoa);
+		targetFile.AddSection(CODE_SECTION_NAME, pStubCodeSec->SizeOfRawData, SEC_CODE | _SEC_WRITE, &newCodeSec, &newCodeSecAddrFoa);
 		RtlCopyMemory((LPVOID)((DWORD64)targetFile.bufAddr + newCodeSecAddrFoa), (LPVOID)((DWORD64)stubFile.bufAddr + pStubCodeSec->PointerToRawData), pStubCodeSec->SizeOfRawData);
 
 		SHARE_INFO share_info = { 0 };
@@ -53,7 +58,7 @@ namespace Ck2Stub {
 
 		//TODO LVMProtect
 
-		targetFile.AddSection(CODEINFO_SECTION_NAME, 0, SEC_ATTRIB_RWE);
+		targetFile.AddSection(CODEINFO_SECTION_NAME, 0, SEC_DATA);
 		RelocPack(&targetFile, &stubFile, &share_info); //ERROR：数字签名数据没了
 		cout << "[+] 已处理重定位信息。" << endl;
 		
@@ -69,6 +74,7 @@ namespace Ck2Stub {
 
 		LPVOID shareInfoAddr = (LPVOID)((DWORD64)targetFile.bufAddr + targetFile.Rva2Foa(newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile)));//本地PE文件的share_info的对应地址
 		share_info.ImageBaseOffset = newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile);
+		share_info.OldImageBase = targetFile.GetImageBase();
 		RtlCopyMemory(shareInfoAddr, &share_info, sizeof(SHARE_INFO)); //上传share_info
 
 		targetFile.SetOep(newCodeSec.VirtualAddress + stubOepSecOffset);
@@ -159,7 +165,7 @@ namespace Ck2Stub {
 
 	VOID RemoveSectionName(PeFile* stubFile, WORD secNum){
 		for (UINT i = 0; i < secNum; i++) {
-			RtlZeroMemory(stubFile->firstSecHdr[i].Name, 7);
+			RtlZeroMemory(stubFile->firstSecHdr[i].Name, 8);
 		}
 	}
 

@@ -2,14 +2,34 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="pe.cpp">
+      <Filter>pe</Filter>
+    </ClCompile>
+    <ClCompile Include="basic.cpp">
+      <Filter>basic</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Public\StubInfo_Public.h" />
+    <ClInclude Include="pe.h">
+      <Filter>pe</Filter>
+    </ClInclude>
+    <ClInclude Include="basic.h">
+      <Filter>basic</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Export.def" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="stub.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="pe">
+      <UniqueIdentifier>{b2112181-6e0d-4a71-977a-7b537c49d401}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="basic">
+      <UniqueIdentifier>{695a440e-a2f3-4161-b0ea-31922d216f4a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

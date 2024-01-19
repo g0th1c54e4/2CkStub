@@ -16,6 +16,10 @@ BOOL _PeFile::Init(WCHAR* targetFilePath){
 	return init_peHdr();
 }
 
+BOOL _PeFile::JudgeDllFile(){
+	return ((ntHdr32->FileHeader.Characteristics & IMAGE_FILE_DLL) != 0);
+}
+
 PIMAGE_FILE_HEADER _PeFile::GetFileHdr(){
 	return &(ntHdr32->FileHeader);
 }
@@ -54,6 +58,7 @@ FileBit _PeFile::init_judgeBit(){  // 1 ==> 64Bit、0 ==> 32Bit
 	else if (ntHdr32->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC) {
 		return Bit64;
 	}
+	return BitNone;
 }
 
 BOOL _PeFile::CheckSecTabSpace(UINT numOfInsertSec){
@@ -160,6 +165,7 @@ PIMAGE_SECTION_HEADER _PeFile::GetRelocSec(){
 }
 
 DWORD _PeFile::Rva2Foa(DWORD RvaValue){
+	// 注意:转换偏移的时候 "有可能" 对新添加进来的新区块头不起作用
 	switch (fileBit){
 	case Bit32:
 		// 可以判断文件对齐值和内存对齐值是否一致，如果一致则直接返回结果
@@ -190,6 +196,7 @@ DWORD _PeFile::Rva2Foa(DWORD RvaValue){
 }
 
 DWORD _PeFile::Foa2Rva(DWORD FoaValue){
+	// 注意:转换偏移的时候 "有可能" 对新添加进来的新区块头不起作用
 	switch (fileBit){
 	case Bit32:
 		// 可以判断文件对齐值和内存对齐值是否一致，如果一致则直接返回结果
@@ -259,6 +266,10 @@ DWORD _PeFile::GetExportFuncAddrRVA(CHAR* targetFuncName){
 	if (fileBit == Bit64) {
 		pExport = (PIMAGE_EXPORT_DIRECTORY)((DWORD64)this->bufAddr + Rva2Foa(ntHdr64->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress));
 	}
+	
+	if (pExport == 0) {
+		return 0;
+	}
 	DWORD dwNum = pExport->NumberOfFunctions;
 
 	PDWORD pdwName = (PDWORD)(Rva2Foa(pExport->AddressOfNames) + (DWORD64)this->bufAddr);
@@ -269,7 +280,7 @@ DWORD _PeFile::GetExportFuncAddrRVA(CHAR* targetFuncName){
 		LPCSTR lpFuncName = (LPCSTR)(Rva2Foa(pdwName[i]) + (DWORD64)this->bufAddr);
 		if (strcmp(lpFuncName, targetFuncName) == 0) {
 			WORD wOrd = pwOrder[i];
-			return (DWORD64)pdwFuncAddr[wOrd];
+			return (DWORD)pdwFuncAddr[wOrd];
 		}
 	}
 	
@@ -496,25 +507,67 @@ _PeFile::_PeFile() {
 	firstSecHdr = 0;
 }
 
-std::vector<PIMAGE_IMPORT_DESCRIPTOR> _PeFile::GetIIDList(){
-	std::vector<PIMAGE_IMPORT_DESCRIPTOR> resultList;
-	PIMAGE_DATA_DIRECTORY dirIat = GetDirByOrder(Dir_Import);
-	DWORD numOfIID = (dirIat->Size - sizeof(IMAGE_IMPORT_DESCRIPTOR)) / sizeof(IMAGE_IMPORT_DESCRIPTOR);
-	PIMAGE_IMPORT_DESCRIPTOR pFirstIID = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD64)this->bufAddr + Rva2Foa(dirIat->VirtualAddress));
-	for (UINT i = 0; i < numOfIID; i++){
-		//CHAR* dllName = (CHAR*)((DWORD64)this->bufAddr + Rva2Foa((pFirstIID + i)->Name));
+//std::vector<PIMAGE_IMPORT_DESCRIPTOR> _PeFile::GetIIDList(){
+//	std::vector<PIMAGE_IMPORT_DESCRIPTOR> resultList;
+//	PIMAGE_DATA_DIRECTORY dirIat = GetDirByOrder(Dir_Import);
+//	DWORD numOfIID = (dirIat->Size - sizeof(IMAGE_IMPORT_DESCRIPTOR)) / sizeof(IMAGE_IMPORT_DESCRIPTOR);
+//	PIMAGE_IMPORT_DESCRIPTOR pFirstIID = (PIMAGE_IMPORT_DESCRIPTOR)((DWORD64)this->bufAddr + Rva2Foa(dirIat->VirtualAddress));
+//	for (UINT i = 0; i < numOfIID; i++){
+//		//CHAR* dllName = (CHAR*)((DWORD64)this->bufAddr + Rva2Foa((pFirstIID + i)->Name));
+//
+//		resultList.push_back(pFirstIID + i);
+//	}
+//
+//	return resultList;
+//}
 
-		resultList.push_back(pFirstIID + i);
+DWORD _PeFile::ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, LocalBuf* outImpInfoBuf, DWORD baseRva){ // 构造简易导入表
+	// a.计算大小
+	DWORD iidTabSize = (inEasyImpInfo->size() + 1) * sizeof(IMAGE_IMPORT_DESCRIPTOR); //全部IID的大小
+	DWORD ftSize = 0; // 全部FirstThunk(或OriginFirstThunk)的大小
+	DWORD funcByNameSize = 0; //全部ByName结构体的大小
+	for (UINT i = 0; i < inEasyImpInfo->size(); i++){
+		iidTabSize += ((*inEasyImpInfo)[i]).DllName.length() + 1;
+
+		if (fileBit == Bit32) {
+			ftSize += (((*inEasyImpInfo)[i]).FunctionNames.size() + 1) * sizeof(IMAGE_THUNK_DATA32);
+		}
+		if (fileBit == Bit64) {
+			ftSize += (((*inEasyImpInfo)[i]).FunctionNames.size() + 1) * sizeof(IMAGE_THUNK_DATA64);
+		}
+		for (UINT j = 0; j < ((*inEasyImpInfo)[i]).FunctionNames.size(); j++) {
+			funcByNameSize += sizeof(WORD) + ((*inEasyImpInfo)[i]).FunctionNames[j].length() + 1;
+		}
 	}
 
-	return resultList;
+	DWORD bufSize = iidTabSize + (ftSize * 2) + funcByNameSize; //整体Buffer的大小
+	outImpInfoBuf->CreateBuffer(bufSize);
+
+	// b.构造
+	DWORD writePoint_FTs = 0;
+	DWORD writePoint_OFTs = ftSize;
+	DWORD writePoint_ByNameArr = (ftSize * 2);
+	DWORD writePoint_IIDArr = (ftSize * 2) + funcByNameSize;
+	
+	for (UINT i = 0; i < inEasyImpInfo->size(); i++) {
+		IMAGE_IMPORT_DESCRIPTOR impDesc = { 0 };
+		
+		//写完后再自行加上 baseRva 的值
+		impDesc.FirstThunk = writePoint_FTs;
+		impDesc.OriginalFirstThunk = writePoint_OFTs;
+		impDesc.Name = 1;
+	}
+	
+	
+
+	return 0;
 }
 
 DWORD _PeFile::RemoveDosStub(){
 	LocalBuf peHdr;
 	LPVOID peHdrAddr = (LPVOID)((DWORD64)this->ntHdr32);
 	LPVOID peHdrFinalAddr = (LPVOID)((DWORD64)(firstSecHdr + (ntHdr32->FileHeader.NumberOfSections + 2)));
-	DWORD peHdrsize = (DWORD64)peHdrFinalAddr - (DWORD64)peHdrAddr;
+	DWORD peHdrsize = (DWORD)((DWORD64)peHdrFinalAddr - (DWORD64)peHdrAddr);
 	DWORD dosStubSize = ((DWORD64)peHdrAddr - (DWORD64)(dosHdr + 1));
 
 	peHdr.CopyBuffer(peHdrAddr, peHdrsize);

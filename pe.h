@@ -4,10 +4,21 @@
 #include <Windows.h>
 #include <vector>
 #include <imagehlp.h>
+#include <string>
 #pragma comment(lib, "Imagehlp.lib")
 #include "file.h"
 #include "buf.h"
 
+#define _SEC_READ IMAGE_SCN_MEM_READ
+#define _SEC_WRITE IMAGE_SCN_MEM_WRITE
+#define _SEC_EXEC IMAGE_SCN_MEM_EXECUTE
+#define _SEC_CODE IMAGE_SCN_CNT_CODE
+#define _SEC_DATA IMAGE_SCN_CNT_INITIALIZED_DATA
+#define SEC_ATTRIB_RWE (IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE)
+#define SEC_CODE (IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ | IMAGE_SCN_CNT_CODE)
+#define SEC_DATA (IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE)
+
+// Reloc Start
 typedef struct _Type_Offset {
 	WORD offset : 12;
 	WORD type : 4;
@@ -18,10 +29,20 @@ typedef struct _Base_reloc_sec {
 	DWORD SizeOfBlock;
 	std::vector<Type_Offset> TypeOffsetArray;
 }Base_reloc_sec;
+// Reloc End
 
-enum FileBit { 
+// Import Start
+
+typedef struct _easy_imp_desc_sec {
+	std::string DllName;
+	std::vector<std::string> FunctionNames;
+} easy_imp_desc_sec;
+// Import End
+
+enum FileBit {
+	BitNone = -1,
 	Bit32 = 0,
-	Bit64 = 1 
+	Bit64 = 1
 };
 enum DirEntryOrder {
 	Dir_Export = IMAGE_DIRECTORY_ENTRY_EXPORT,
@@ -67,7 +88,7 @@ private:
 	VOID ReSize(DWORD newSize);
 
 	//WORD nunOfSec;
-	
+
 public:
 
 	// 注意，此类不提供针对内存形式的PE文件的存储形式的方法函数。原因在于方便后续Buffer保存到原文件。
@@ -82,16 +103,17 @@ public:
 	BOOL Init(CHAR* targetFilePath);
 	BOOL Init(WCHAR* targetFilePath);
 
+	BOOL JudgeDllFile(); //检测PE文件是否为DLL文件
 	PIMAGE_FILE_HEADER GetFileHdr(); //获取文件头
 	WORD GetSecNum(); //获取区块数量
-	
+
 	std::vector<PIMAGE_SECTION_HEADER> GetSecHdrList(); //获取区块头数组
 	PIMAGE_SECTION_HEADER GetSecHdrByName(CONST CHAR* sectionName); //根据区块名来获取对应区块头
 	PIMAGE_SECTION_HEADER GetSecHdrByRva(DWORD rvaValue); //根据Rva来获取对应区块头
 	PIMAGE_SECTION_HEADER GetSecHdrByFoa(DWORD foaValue); //根据Foa来获取对应区块头
 	PIMAGE_SECTION_HEADER GetCodeSec(); //获取OEP所在区块对应的区块头
 	PIMAGE_SECTION_HEADER GetRelocSec(); //获取重定位表所在区块对应的区块头
-	
+
 	DWORD Rva2Foa(DWORD RvaValue); //RVA转换FOA
 	DWORD Foa2Rva(DWORD FoaValue); //FOA转换RVA
 	DWORD AlignFile(DWORD value); //文件对齐
@@ -106,7 +128,7 @@ public:
 	VOID DynamicsBaseOff(); //关闭动态基址
 	BOOL AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr = NULL, DWORD* newSecReturnFOA = NULL, DWORD* newSecReturnRVA = NULL); //添加新区块
 	VOID ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr = NULL, DWORD* secReturnFOA = NULL, DWORD* secReturnRVA = NULL); //扩充最后一个区块
-	
+
 	VOID SetOep(DWORD oepValue); //设置新的OEP入口点
 	DWORD GetOep(); //获取OEP入口点
 
@@ -116,10 +138,11 @@ public:
 	VOID SetCheckSum(DWORD checksumValue); //设置当前PE文件的校验和
 	DWORD CalcCheckSum(); //计算当前PE文件的校验和(输入整个PE文件，计算出准确的校验和)
 
-	std::vector<PIMAGE_IMPORT_DESCRIPTOR> GetIIDList(); //获取IID导入表列表
+	DWORD ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, LocalBuf* outImpInfoBuf, DWORD baseRva); //将简易导入表信息数组转换成导入表数据。返回Buffer的大小(outRelocInfoBuf必须是未初始化的状态)
+	//std::vector<PIMAGE_IMPORT_DESCRIPTOR> GetIIDList(); //获取IID导入表列表
 
 	DWORD RemoveDosStub(); //清除Dos存根，将整个PE头往上移动。返回所腾出的空闲字节数(通常是为了增加更多区块头而使用的)
-	
+
 	std::vector<Base_reloc_sec> GetRelocInfo(); //将PE文件内的重定位表数据转换成可灵活处理的重定位信息数组
 	DWORD RelocInfo2Buf(std::vector<Base_reloc_sec>* inRelocInfo, LocalBuf* outRelocInfoBuf); //将重定位信息数组转换成重定位表数据。返回Buffer的大小(outRelocInfoBuf必须是未初始化的状态)
 	VOID RepairReloc(DWORD relocBaseFoaAddr, DWORD diffValue); //修复重定位
