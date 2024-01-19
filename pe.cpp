@@ -528,8 +528,9 @@ DWORD _PeFile::ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, Lo
 	}
 	DWORD ftSize = 0; // 全部FirstThunk(或OriginFirstThunk)的大小
 	DWORD funcByNameSize = 0; // 全部ByName结构体的大小
+	DWORD iidDllNameSize = 0; // 所有DllName字符串的大小
 	for (UINT i = 0; i < inEasyImpInfo->size(); i++){
-		iidTabSize += ((*inEasyImpInfo)[i]).DllName.length() + 1;
+		iidDllNameSize += ((*inEasyImpInfo)[i]).DllName.length() + 1;
 
 		if (fileBit == Bit32) {
 			ftSize += (((*inEasyImpInfo)[i]).FunctionNames.size() + 1) * sizeof(IMAGE_THUNK_DATA32);
@@ -545,7 +546,7 @@ DWORD _PeFile::ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, Lo
 	if (returnIatSize != NULL) {
 		*returnIatSize = ftSize;
 	}
-	DWORD bufSize = iidTabSize + (ftSize * 2) + funcByNameSize; //整体Buffer的大小
+	DWORD bufSize = iidTabSize + (ftSize * 2) + funcByNameSize + iidDllNameSize; //整体Buffer的大小
 	outImpInfoBuf->CreateBuffer(bufSize);
 
 	// b.构造
@@ -559,18 +560,18 @@ DWORD _PeFile::ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, Lo
 	if (returnImpRva != NULL) {
 		*returnImpRva = baseRva + writePoint_IIDArr;
 	}
+	DWORD writePoint_DllNameArr = (ftSize * 2) + funcByNameSize + iidTabSize;
 	
 	for (UINT i = 0; i < inEasyImpInfo->size(); i++) {
 		IMAGE_IMPORT_DESCRIPTOR impDesc = { 0 };
 		
 		impDesc.FirstThunk = baseRva + writePoint_FTs;
 		impDesc.OriginalFirstThunk = baseRva + writePoint_OFTs;
-		impDesc.Name = baseRva + writePoint_IIDArr + sizeof(IMAGE_IMPORT_DESCRIPTOR);
+		impDesc.Name = baseRva + writePoint_DllNameArr;
 		RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_IIDArr), &impDesc, sizeof(IMAGE_IMPORT_DESCRIPTOR));
 		writePoint_IIDArr += sizeof(IMAGE_IMPORT_DESCRIPTOR);
 
 		for (UINT j = 0; j < ((*inEasyImpInfo)[i]).FunctionNames.size(); j++) {
-
 			RtlZeroMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_ByNameArr), sizeof(WORD));
 			RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_ByNameArr + sizeof(WORD)), ((*inEasyImpInfo)[i]).FunctionNames[j].c_str(), ((*inEasyImpInfo)[i]).FunctionNames[j].length() + 1);
 
@@ -596,10 +597,18 @@ DWORD _PeFile::ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, Lo
 			writePoint_ByNameArr += sizeof(WORD);
 			writePoint_ByNameArr += ((*inEasyImpInfo)[i]).FunctionNames[j].length() + 1;
 		}
-		
-		RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_IIDArr), ((*inEasyImpInfo)[i]).DllName.c_str(), ((*inEasyImpInfo)[i]).DllName.length() + 1);
-		writePoint_IIDArr += ((*inEasyImpInfo)[i]).DllName.length() + 1;
-	}	
+
+		if (fileBit == Bit32) {
+			writePoint_FTs += sizeof(IMAGE_THUNK_DATA32);
+			writePoint_OFTs += sizeof(IMAGE_THUNK_DATA32);
+		}
+		if (fileBit == Bit64) {
+			writePoint_FTs += sizeof(IMAGE_THUNK_DATA64);
+			writePoint_OFTs += sizeof(IMAGE_THUNK_DATA64);
+		}
+		RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_DllNameArr), ((*inEasyImpInfo)[i]).DllName.c_str(), ((*inEasyImpInfo)[i]).DllName.length() + 1);
+		writePoint_DllNameArr += ((*inEasyImpInfo)[i]).DllName.length() + 1;
+	}
 
 	return bufSize;
 }

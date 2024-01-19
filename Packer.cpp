@@ -104,12 +104,19 @@ namespace Ck2Stub {
 
 		//构造壳的导入表
 		std::vector<easy_imp_desc_sec> easy_impDesc_secArr; 
+
 		easy_imp_desc_sec east_impDesc_sec_kernel32;
 		east_impDesc_sec_kernel32.DllName = "kernel32.dll";
 		east_impDesc_sec_kernel32.FunctionNames.push_back("LoadLibraryA");
 		east_impDesc_sec_kernel32.FunctionNames.push_back("GetProcAddress");
 		east_impDesc_sec_kernel32.FunctionNames.push_back("GetModuleHandleA");
 		easy_impDesc_secArr.push_back(east_impDesc_sec_kernel32);
+
+		easy_imp_desc_sec east_impDesc_sec_user32;
+		east_impDesc_sec_user32.DllName = "user32.dll";
+		east_impDesc_sec_user32.FunctionNames.push_back("MessageBoxW");
+		east_impDesc_sec_user32.FunctionNames.push_back("MessageBoxA");
+		easy_impDesc_secArr.push_back(east_impDesc_sec_user32);
 
 		LocalBuf importBuf;
 		DWORD iatRva = 0, impRva = 0;
