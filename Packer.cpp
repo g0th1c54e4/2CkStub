@@ -115,7 +115,6 @@ namespace Ck2Stub {
 		easy_imp_desc_sec east_impDesc_sec_user32;
 		east_impDesc_sec_user32.DllName = "user32.dll";
 		east_impDesc_sec_user32.FunctionNames.push_back("MessageBoxW");
-		east_impDesc_sec_user32.FunctionNames.push_back("MessageBoxA");
 		easy_impDesc_secArr.push_back(east_impDesc_sec_user32);
 
 		LocalBuf importBuf;

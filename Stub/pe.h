@@ -8,8 +8,8 @@ typedef struct _Type_Offset {
 	WORD type : 4;
 }Type_Offset;
 
-DWORD WINAPI GetExportFuncAddrRVA(LPVOID peFileBuf, CHAR* targetFuncName); //获取导出函数地址(RVA)
-
+DWORD WINAPI GetExportFuncAddrRVA(LPVOID peFileBuf, CHAR* FuncName); //获取导出函数地址(RVA)
+LPVOID WINAPI GetImportFunc(LPVOID peFileBuf, CHAR* LibraryName, CHAR* FuncName); //获取指定模块的导入函数地址(VA)
 
 
 #ifdef _WIN64

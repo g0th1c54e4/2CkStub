@@ -689,11 +689,21 @@ VOID _PeFile::RepairReloc(DWORD relocBaseFoaAddr, DWORD diffValue){
 		Type_Offset* pTypeOffs = (Type_Offset*)(pReloc + 1);
 		DWORD dwCount = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(Type_Offset);
 		for (UINT i = 0; i < dwCount; i++) {
-			if (pTypeOffs[i].type != IMAGE_REL_BASED_HIGHLOW) {
+			if (fileBit == Bit32) {
+				if (pTypeOffs[i].type != IMAGE_REL_BASED_HIGHLOW) {
+					continue;
+				}
+				PDWORD pdwRepairAddr = (PDWORD)((DWORD64)this->bufAddr + this->Rva2Foa(pReloc->VirtualAddress + pTypeOffs[i].offset));
+				*pdwRepairAddr += diffValue;
 				continue;
 			}
-			PDWORD pdwRepairAddr = (PDWORD)((DWORD64)this->bufAddr + this->Rva2Foa(pReloc->VirtualAddress + pTypeOffs[i].offset));
-			*pdwRepairAddr += diffValue;
+			if (fileBit == Bit64) {
+				if (pTypeOffs[i].type != IMAGE_REL_BASED_DIR64) {
+					continue;
+				}
+				PDWORD pdwRepairAddr = (PDWORD)((DWORD64)this->bufAddr + this->Rva2Foa(pReloc->VirtualAddress + pTypeOffs[i].offset));
+				*pdwRepairAddr += diffValue;
+			}
 		}
 		pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)pReloc + pReloc->SizeOfBlock);
 	}

@@ -18,6 +18,9 @@ DWORD64 imageBase = 0;
 DWORD imageBase = 0;
 #endif
 
+typedef int (WINAPI* _MessageBoxW)(HWND hWnd, LPCWSTR lpText, LPCWSTR lpCaption, UINT uType);
+_MessageBoxW  fnMessageBoxW;
+
 
 VOID WINAPI StubInit() {
 	//修正映像基址
@@ -29,6 +32,9 @@ VOID WINAPI StubInit() {
 	share_info.OriginEntryPoint += imageBase;
 
 	//TODO:初始化API函数 (利用IAT的GetProcAddress和LoadLibraryA来获取函数地址，以及用VirtualProtect打开权限)
+	
+	fnMessageBoxW = (_MessageBoxW)GetImportFunc((LPVOID)imageBase, (CHAR*)"user32.dll", (CHAR*)"MessageBoxW");
+	fnMessageBoxW(NULL, L"Hello World", L"Ck2Stub:", MB_OK);
 
 	//TODO:恢复原始区块数据(需要Write权限)
 

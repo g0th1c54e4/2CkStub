@@ -5,4 +5,5 @@
 
 BOOL WINAPI StringCmp(LPCSTR lpStr1, LPCSTR lpStr2);
 
+
 #endif
