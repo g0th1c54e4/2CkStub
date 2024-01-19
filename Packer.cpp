@@ -59,7 +59,7 @@ namespace Ck2Stub {
 		//TODO LVMProtect
 
 		targetFile.AddSection(CODEINFO_SECTION_NAME, 0, SEC_DATA);
-		RelocPack(&targetFile, &stubFile, &share_info); //ERROR：数字签名数据没了
+		RelocPack(&targetFile, &stubFile, &share_info);
 		cout << "[+] 已处理重定位信息。" << endl;
 		
 		//TlsPack(&targetFile, &stubFile, &share_info);
@@ -98,16 +98,40 @@ namespace Ck2Stub {
 	}
 
 	VOID IatPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
-		//PIMAGE_SECTION_HEADER stubImport = stubFile->GetSecHdrByRva(stubFile->GetDirByOrder(Dir_Iat)->VirtualAddress);
-		//IMAGE_SECTION_HEADER newImportSec = { 0 };
-		//DWORD newImportSecAddrFoa = 0;
-		//targetFile->ExtendLastSection(stubImport->SizeOfRawData, CK2STUB_SECTION_ATTRIB_RWE, &newImportSec, &newImportSecAddrFoa);
-		//RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newImportSecAddrFoa), (LPVOID)((DWORD64)stubFile->bufAddr + stubFile->Rva2Foa(stubImport->VirtualAddress)),stubImport->SizeOfRawData);
+		
+		PIMAGE_SECTION_HEADER lastSec = targetFile->firstSecHdr + (targetFile->GetSecNum() - 1);
+		DWORD lastSecRva = lastSec->VirtualAddress + lastSec->SizeOfRawData;
 
-		//关于Iat，必须要完成两个任务
-		//1.将Stub自身的导入表附加到原程序上
-		//2.保护好原程序的导入表(可以参考吾爱、看雪论坛上的关于IAT加密的帖子来学习)
+		//构造壳的导入表
+		std::vector<easy_imp_desc_sec> easy_impDesc_secArr; 
+		easy_imp_desc_sec east_impDesc_sec_kernel32;
+		east_impDesc_sec_kernel32.DllName = "kernel32.dll";
+		east_impDesc_sec_kernel32.FunctionNames.push_back("LoadLibraryA");
+		east_impDesc_sec_kernel32.FunctionNames.push_back("GetProcAddress");
+		east_impDesc_sec_kernel32.FunctionNames.push_back("GetModuleHandleA");
+		easy_impDesc_secArr.push_back(east_impDesc_sec_kernel32);
+
+		LocalBuf importBuf;
+		DWORD iatRva = 0, impRva = 0;
+		DWORD iatSize = 0, impSize = 0;
+		DWORD impBufSize = targetFile->ImpEasyInfo2Buf(&easy_impDesc_secArr, &importBuf, lastSecRva, &iatRva, &impRva, &iatSize, &impSize);
+		DWORD newImportSecFoa = 0;
+		targetFile->ExtendLastSection(impBufSize, NULL, &newImportSecFoa, NULL);
+		RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newImportSecFoa), importBuf.bufAddr, impBufSize);
+
+		//更新
+		PIMAGE_DATA_DIRECTORY iatDir = targetFile->GetDirByOrder(Dir_Iat);
+		PIMAGE_DATA_DIRECTORY impDir = targetFile->GetDirByOrder(Dir_Import);
+		share_info->Iat.RvaAddr = iatDir->VirtualAddress;
+		share_info->Iat.Size = iatDir->Size;
+		share_info->Import.RvaAddr = impDir->VirtualAddress;
+		share_info->Import.Size = impDir->Size;
+		iatDir->VirtualAddress = iatRva;
+		iatDir->Size = iatSize;
+		impDir->VirtualAddress = impRva;
+		impDir->Size = impSize;
 	}
+
 	VOID RelocPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
 		PIMAGE_SECTION_HEADER stubCodeSec = stubFile->GetCodeSec();
 		PIMAGE_SECTION_HEADER codeSec = targetFile->GetSecHdrByName(CODE_SECTION_NAME);
@@ -127,7 +151,7 @@ namespace Ck2Stub {
 
 		IMAGE_SECTION_HEADER newRelocSec = { 0 };
 		DWORD newRelocSecAddrFoa = 0, newRelocSecAddrRva = 0;
-		targetFile->ExtendLastSection(relocBufSize, SEC_ATTRIB_RWE, &newRelocSec, &newRelocSecAddrFoa, &newRelocSecAddrRva);
+		targetFile->ExtendLastSection(relocBufSize, &newRelocSec, &newRelocSecAddrFoa, &newRelocSecAddrRva);
 		RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newRelocSecAddrFoa), relocBuf.bufAddr, relocBufSize);
 		
 		codeSec = targetFile->GetSecHdrByName(CODE_SECTION_NAME);

@@ -127,7 +127,7 @@ public:
 
 	VOID DynamicsBaseOff(); //关闭动态基址
 	BOOL AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* newSecReturnHdr = NULL, DWORD* newSecReturnFOA = NULL, DWORD* newSecReturnRVA = NULL); //添加新区块
-	VOID ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr = NULL, DWORD* secReturnFOA = NULL, DWORD* secReturnRVA = NULL); //扩充最后一个区块
+	VOID ExtendLastSection(DWORD addSize, IMAGE_SECTION_HEADER* secReturnHdr = NULL, DWORD* secReturnFOA = NULL, DWORD* secReturnRVA = NULL); //扩充最后一个区块
 
 	VOID SetOep(DWORD oepValue); //设置新的OEP入口点
 	DWORD GetOep(); //获取OEP入口点
@@ -138,7 +138,7 @@ public:
 	VOID SetCheckSum(DWORD checksumValue); //设置当前PE文件的校验和
 	DWORD CalcCheckSum(); //计算当前PE文件的校验和(输入整个PE文件，计算出准确的校验和)
 
-	DWORD ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, LocalBuf* outImpInfoBuf, DWORD baseRva); //将简易导入表信息数组转换成导入表数据。返回Buffer的大小(outRelocInfoBuf必须是未初始化的状态)
+	DWORD ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, LocalBuf* outImpInfoBuf, DWORD baseRva, DWORD* returnIatRva = NULL, DWORD* returnImpRva = NULL, DWORD* returnIatSize = NULL, DWORD* returnImpSize = NULL); //[可以通过参数回传IAT和IMPORT表的地址].将简易导入表信息数组转换成导入表数据。返回Buffer的大小(outRelocInfoBuf必须是未初始化的状态)
 	//std::vector<PIMAGE_IMPORT_DESCRIPTOR> GetIIDList(); //获取IID导入表列表
 
 	DWORD RemoveDosStub(); //清除Dos存根，将整个PE头往上移动。返回所腾出的空闲字节数(通常是为了增加更多区块头而使用的)

@@ -395,13 +395,12 @@ BOOL _PeFile::AddSection(CONST CHAR* newSecName, DWORD newSecSize, DWORD newSecA
 	return TRUE;
 }
 
-VOID _PeFile::ExtendLastSection(DWORD addSize, DWORD newSecAttrib, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA, DWORD* secReturnRVA){
+VOID _PeFile::ExtendLastSection(DWORD addSize, IMAGE_SECTION_HEADER* secReturnHdr, DWORD* secReturnFOA, DWORD* secReturnRVA){
 	UINT numOfSec = this->ntHdr32->FileHeader.NumberOfSections;
 
 	PIMAGE_SECTION_HEADER lastSec = &firstSecHdr[numOfSec - 1];
 	DWORD sizeOfAddData = this->bufSize - (lastSec->PointerToRawData + lastSec->SizeOfRawData); //附加数据大小
 	DWORD sizeOfOriginRawData = lastSec->SizeOfRawData; //原始区块的文件形式大小
-	lastSec->Characteristics = newSecAttrib;
 	lastSec->SizeOfRawData += AlignFile(addSize);
 	lastSec->Misc.VirtualSize += AlignSection(addSize);
 
@@ -521,11 +520,14 @@ _PeFile::_PeFile() {
 //	return resultList;
 //}
 
-DWORD _PeFile::ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, LocalBuf* outImpInfoBuf, DWORD baseRva){ // 构造简易导入表
+DWORD _PeFile::ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, LocalBuf* outImpInfoBuf, DWORD baseRva, DWORD* returnIatRva, DWORD* returnImpRva, DWORD* returnIatSize, DWORD* returnImpSize){ // 构造简易导入表
 	// a.计算大小
-	DWORD iidTabSize = (inEasyImpInfo->size() + 1) * sizeof(IMAGE_IMPORT_DESCRIPTOR); //全部IID的大小
+	DWORD iidTabSize = (inEasyImpInfo->size() + 1) * sizeof(IMAGE_IMPORT_DESCRIPTOR); // 全部IID的大小
+	if (returnImpSize != NULL) {
+		*returnImpSize = iidTabSize;
+	}
 	DWORD ftSize = 0; // 全部FirstThunk(或OriginFirstThunk)的大小
-	DWORD funcByNameSize = 0; //全部ByName结构体的大小
+	DWORD funcByNameSize = 0; // 全部ByName结构体的大小
 	for (UINT i = 0; i < inEasyImpInfo->size(); i++){
 		iidTabSize += ((*inEasyImpInfo)[i]).DllName.length() + 1;
 
@@ -540,27 +542,66 @@ DWORD _PeFile::ImpEasyInfo2Buf(std::vector<easy_imp_desc_sec>* inEasyImpInfo, Lo
 		}
 	}
 
+	if (returnIatSize != NULL) {
+		*returnIatSize = ftSize;
+	}
 	DWORD bufSize = iidTabSize + (ftSize * 2) + funcByNameSize; //整体Buffer的大小
 	outImpInfoBuf->CreateBuffer(bufSize);
 
 	// b.构造
 	DWORD writePoint_FTs = 0;
+	if (returnIatRva != NULL) {
+		*returnIatRva = baseRva + writePoint_FTs;
+	}
 	DWORD writePoint_OFTs = ftSize;
 	DWORD writePoint_ByNameArr = (ftSize * 2);
 	DWORD writePoint_IIDArr = (ftSize * 2) + funcByNameSize;
+	if (returnImpRva != NULL) {
+		*returnImpRva = baseRva + writePoint_IIDArr;
+	}
 	
 	for (UINT i = 0; i < inEasyImpInfo->size(); i++) {
 		IMAGE_IMPORT_DESCRIPTOR impDesc = { 0 };
 		
-		//写完后再自行加上 baseRva 的值
-		impDesc.FirstThunk = writePoint_FTs;
-		impDesc.OriginalFirstThunk = writePoint_OFTs;
-		impDesc.Name = 1;
-	}
-	
-	
+		impDesc.FirstThunk = baseRva + writePoint_FTs;
+		impDesc.OriginalFirstThunk = baseRva + writePoint_OFTs;
+		impDesc.Name = baseRva + writePoint_IIDArr + sizeof(IMAGE_IMPORT_DESCRIPTOR);
+		RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_IIDArr), &impDesc, sizeof(IMAGE_IMPORT_DESCRIPTOR));
+		writePoint_IIDArr += sizeof(IMAGE_IMPORT_DESCRIPTOR);
 
-	return 0;
+		for (UINT j = 0; j < ((*inEasyImpInfo)[i]).FunctionNames.size(); j++) {
+
+			RtlZeroMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_ByNameArr), sizeof(WORD));
+			RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_ByNameArr + sizeof(WORD)), ((*inEasyImpInfo)[i]).FunctionNames[j].c_str(), ((*inEasyImpInfo)[i]).FunctionNames[j].length() + 1);
+
+			if (fileBit == Bit32) {
+				IMAGE_THUNK_DATA32 thunkData = { 0 };
+				thunkData.u1.AddressOfData = baseRva + writePoint_ByNameArr;
+
+				RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_FTs), &thunkData, sizeof(IMAGE_THUNK_DATA32));
+				RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_OFTs), &thunkData, sizeof(IMAGE_THUNK_DATA32));
+				writePoint_FTs += sizeof(IMAGE_THUNK_DATA32);
+				writePoint_OFTs += sizeof(IMAGE_THUNK_DATA32);
+			}
+			if (fileBit == Bit64) {
+				IMAGE_THUNK_DATA64 thunkData = { 0 };
+				thunkData.u1.AddressOfData = (DWORD64)(baseRva + writePoint_ByNameArr);
+
+				RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_FTs), &thunkData, sizeof(IMAGE_THUNK_DATA64));
+				RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_OFTs), &thunkData, sizeof(IMAGE_THUNK_DATA64));
+				writePoint_FTs += sizeof(IMAGE_THUNK_DATA64);
+				writePoint_OFTs += sizeof(IMAGE_THUNK_DATA64);
+			}
+
+			writePoint_ByNameArr += sizeof(WORD);
+			writePoint_ByNameArr += ((*inEasyImpInfo)[i]).FunctionNames[j].length() + 1;
+		}
+		
+		RtlCopyMemory((LPVOID)((DWORD64)outImpInfoBuf->bufAddr + writePoint_IIDArr), ((*inEasyImpInfo)[i]).DllName.c_str(), ((*inEasyImpInfo)[i]).DllName.length() + 1);
+		writePoint_IIDArr += ((*inEasyImpInfo)[i]).DllName.length() + 1;
+	}	
+
+	return bufSize;
 }
 
 DWORD _PeFile::RemoveDosStub(){
