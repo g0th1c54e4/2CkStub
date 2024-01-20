@@ -26,12 +26,12 @@ namespace Ck2Stub {
 			stubFile.ClosePeFile();
 			return FALSE;
 		}
-		if (targetFile.GetDirByOrder(Dir_Exception)->VirtualAddress != 0) {
-			cout << "[-] 此程序含有异常处理单元，无法加壳。" << endl;
-			targetFile.ClosePeFile();
-			stubFile.ClosePeFile();
-			return FALSE;
-		}
+		//if (targetFile.GetDirByOrder(Dir_Exception)->VirtualAddress != 0) {
+		//	cout << "[-] 此程序含有异常处理单元，无法加壳。" << endl;
+		//	targetFile.ClosePeFile();
+		//	stubFile.ClosePeFile();
+		//	return FALSE;
+		//}
 		if (targetFile.GetDirByOrder(Dir_LoadConfig)->VirtualAddress != 0) { //关闭SafeSEH保护为后续LVMProtectA的开发作基础
 			PIMAGE_DATA_DIRECTORY loadConfigDir = targetFile.GetDirByOrder(Dir_LoadConfig);
 			LPVOID loadConfigMemAddr = (LPVOID)((DWORD64)targetFile.bufAddr + targetFile.Rva2Foa(loadConfigDir->VirtualAddress));
@@ -108,14 +108,8 @@ namespace Ck2Stub {
 		easy_imp_desc_sec east_impDesc_sec_kernel32;
 		east_impDesc_sec_kernel32.DllName = "kernel32.dll";
 		east_impDesc_sec_kernel32.FunctionNames.push_back("LoadLibraryA");
-		east_impDesc_sec_kernel32.FunctionNames.push_back("GetProcAddress");
 		east_impDesc_sec_kernel32.FunctionNames.push_back("GetModuleHandleA");
 		easy_impDesc_secArr.push_back(east_impDesc_sec_kernel32);
-
-		easy_imp_desc_sec east_impDesc_sec_user32;
-		east_impDesc_sec_user32.DllName = "user32.dll";
-		east_impDesc_sec_user32.FunctionNames.push_back("MessageBoxW");
-		easy_impDesc_secArr.push_back(east_impDesc_sec_user32);
 
 		LocalBuf importBuf;
 		DWORD iatRva = 0, impRva = 0;
@@ -141,6 +135,9 @@ namespace Ck2Stub {
 	VOID RelocPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
 		PIMAGE_SECTION_HEADER stubCodeSec = stubFile->GetCodeSec();
 		PIMAGE_SECTION_HEADER codeSec = targetFile->GetSecHdrByName(CODE_SECTION_NAME);
+		if (stubFile->GetDirByOrder(Dir_BaseReloc)->VirtualAddress == 0 || stubFile->GetDirByOrder(Dir_BaseReloc)->Size == 0) {
+			return;
+		}
 		std::vector<Base_reloc_sec> stubRelocInfo = stubFile->GetRelocInfo();
 		for (UINT i = 0; i < stubRelocInfo.size(); i++){
 			if ((stubRelocInfo[i].VirtualAddress >= stubCodeSec->VirtualAddress) && (stubRelocInfo[i].VirtualAddress <= (stubCodeSec->VirtualAddress + stubCodeSec->Misc.VirtualSize))) {

@@ -8,6 +8,9 @@
     <ClCompile Include="basic.cpp">
       <Filter>basic</Filter>
     </ClCompile>
+    <ClCompile Include="ApiInit.cpp">
+      <Filter>ApiInit</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Public\StubInfo_Public.h" />
@@ -16,6 +19,9 @@
     </ClInclude>
     <ClInclude Include="basic.h">
       <Filter>basic</Filter>
+    </ClInclude>
+    <ClInclude Include="ApiInit.h">
+      <Filter>ApiInit</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -30,6 +36,9 @@
     </Filter>
     <Filter Include="basic">
       <UniqueIdentifier>{695a440e-a2f3-4161-b0ea-31922d216f4a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ApiInit">
+      <UniqueIdentifier>{dc93c2fc-9b7b-43fa-b3f1-f0280555276e}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

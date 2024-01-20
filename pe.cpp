@@ -638,13 +638,16 @@ DWORD _PeFile::RemoveDosStub(){
 std::vector<Base_reloc_sec> _PeFile::GetRelocInfo(){
 	std::vector<Base_reloc_sec> baseRelocSecArr;
 	PIMAGE_DATA_DIRECTORY pRelocDir = this->GetDirByOrder(Dir_BaseReloc);
+	if (pRelocDir->VirtualAddress == 0 || pRelocDir->Size == 0) {
+		return baseRelocSecArr;
+	}
 	PIMAGE_BASE_RELOCATION pReloc = (PIMAGE_BASE_RELOCATION)((DWORD64)this->bufAddr + Rva2Foa(pRelocDir->VirtualAddress));
 	while (pReloc->VirtualAddress != 0 && pReloc->SizeOfBlock != 0) {
 		Type_Offset* pTypeOffs = (Type_Offset*)(pReloc + 1);
 		Base_reloc_sec baseRelocSec = { 0 };
 		baseRelocSec.VirtualAddress = pReloc->VirtualAddress;
 		baseRelocSec.SizeOfBlock = pReloc->SizeOfBlock;
-		DWORD dwCount = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(Type_Offset);
+		DWORD dwCount = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(Type_Offset); //ERROR(x64)
 		for (UINT i = 0; i < dwCount; i++) {
 			baseRelocSec.TypeOffsetArray.push_back(*(pTypeOffs + i));
 		}

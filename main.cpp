@@ -21,15 +21,15 @@ int main() {
 	// C:\Users\90965\Desktop\Ck2Stub\Test.exe
 	cout << "[*] 请键入需要加壳的程序路径: " << endl;
 	//CHAR targetFilePath[MAX_PATH] = { 0 };
-	CHAR targetFilePath[MAX_PATH] = "C:\\Users\\90965\\Desktop\\Ck2Stub\\Test.exe";
+	CHAR targetFilePath[MAX_PATH] = "C:\\Users\\90965\\Desktop\\Ck2Stub\\Test64.exe";
 	//CHAR targetFilePath[MAX_PATH] = "C:\\Users\\90965\\Desktop\\Ck2Stub\\Test64.exe";
 	//cin.getline(targetFilePath, sizeof(targetFilePath));
 
 	// C:\Users\90965\Desktop\Ck2Stub\Stub32.bin
 	cout << "[*] 请键入壳的文件路径: " << endl;
 	//CHAR stubFilePath[MAX_PATH] = { 0 };
-	CHAR stubFilePath[MAX_PATH] = "C:\\Users\\90965\\source\\repos\\2CkStub\\Release\\Stub32.bin";
-	//CHAR stubFilePath[MAX_PATH] = "C:\\Users\\90965\\source\\repos\\2CkStub\\x64\\Release\\Stub64.bin";
+	//CHAR stubFilePath[MAX_PATH] = "C:\\Users\\90965\\source\\repos\\2CkStub\\Release\\Stub32.bin";
+	CHAR stubFilePath[MAX_PATH] = "C:\\Users\\90965\\source\\repos\\2CkStub\\x64\\Release\\Stub64.bin";
 	//cin.getline(stubFilePath, sizeof(stubFilePath));
 
 	CHAR saveFilePath[MAX_PATH] = { 0 };

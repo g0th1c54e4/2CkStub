@@ -1,7 +1,7 @@
 #include "pe.h"
 #include "basic.h"
 
-DWORD WINAPI GetExportFuncAddrRVA(LPVOID peFileBuf, CHAR* targetFuncName){
+LPVOID WINAPI GetExportFunc(LPVOID peFileBuf, CHAR* targetFuncName){
 	PIMAGE_DOS_HEADER pDos = (PIMAGE_DOS_HEADER)peFileBuf;
 #ifdef _WIN64
 	PIMAGE_NT_HEADERS64 pNt = (PIMAGE_NT_HEADERS64)((PBYTE)peFileBuf + pDos->e_lfanew);
@@ -21,7 +21,7 @@ DWORD WINAPI GetExportFuncAddrRVA(LPVOID peFileBuf, CHAR* targetFuncName){
 		LPCSTR lpFuncName = (LPCSTR)(pdwName[i] + (PBYTE)peFileBuf);
 		if (StringCmp(lpFuncName, targetFuncName) == TRUE) {
 			WORD wOrd = pwOrder[i];
-			return (DWORD)pdwFuncAddr[wOrd];
+			return (LPVOID)((PBYTE)peFileBuf + pdwFuncAddr[wOrd]);
 		}
 	}
 	return 0;
@@ -37,12 +37,12 @@ LPVOID WINAPI GetImportFunc(LPVOID peFileBuf, CHAR* LibraryName, CHAR* FuncName)
 	PIMAGE_DATA_DIRECTORY dirImp = pNt->OptionalHeader.DataDirectory + IMAGE_DIRECTORY_ENTRY_IMPORT;
 	PIMAGE_DATA_DIRECTORY dirIat = pNt->OptionalHeader.DataDirectory + IMAGE_DIRECTORY_ENTRY_IAT;
 	DWORD numOfIID = (dirImp->Size - sizeof(IMAGE_IMPORT_DESCRIPTOR)) / sizeof(IMAGE_IMPORT_DESCRIPTOR);
+	PIMAGE_IMPORT_DESCRIPTOR pFirstIID = (PIMAGE_IMPORT_DESCRIPTOR)((PBYTE)peFileBuf + dirImp->VirtualAddress);
 #ifdef _WIN64
 	DWORD numOfFunc = (dirIat->Size - sizeof(PIMAGE_THUNK_DATA64)) / sizeof(PIMAGE_THUNK_DATA64);
 #else
 	DWORD numOfFunc = (dirIat->Size - sizeof(PIMAGE_THUNK_DATA32)) / sizeof(PIMAGE_THUNK_DATA32);
 #endif
-	PIMAGE_IMPORT_DESCRIPTOR pFirstIID = (PIMAGE_IMPORT_DESCRIPTOR)((PBYTE)peFileBuf + dirImp->VirtualAddress);
 	for (UINT i = 0; i < numOfIID; i++) {
 		CHAR* dllName = (CHAR*)((PBYTE)peFileBuf + (pFirstIID + i)->Name);
 		if (StringCmp(dllName, LibraryName) == TRUE) {
@@ -51,15 +51,16 @@ LPVOID WINAPI GetImportFunc(LPVOID peFileBuf, CHAR* LibraryName, CHAR* FuncName)
 #else
 			PIMAGE_THUNK_DATA32 OrgFirstThunkData = (PIMAGE_THUNK_DATA32)((PBYTE)peFileBuf + pFirstIID[i].OriginalFirstThunk);
 #endif
-			PIMAGE_IMPORT_BY_NAME impByName = (PIMAGE_IMPORT_BY_NAME)((PBYTE)peFileBuf + OrgFirstThunkData->u1.AddressOfData);
-			for (UINT j = 0; j < numOfFunc; j++){
-				if (StringCmp(impByName[j].Name, FuncName) == TRUE) {
+			for (UINT j = 0; j < numOfFunc; j++) {
+				PIMAGE_IMPORT_BY_NAME impByName = (PIMAGE_IMPORT_BY_NAME)((PBYTE)peFileBuf + OrgFirstThunkData[j].u1.AddressOfData);
+				if (StringCmp(impByName->Name, FuncName) == TRUE) {
 #ifdef _WIN64
 					PIMAGE_THUNK_DATA64 firstThunkData = (PIMAGE_THUNK_DATA64)((PBYTE)peFileBuf + pFirstIID[i].FirstThunk);
 #else
 					PIMAGE_THUNK_DATA32 firstThunkData = (PIMAGE_THUNK_DATA32)((PBYTE)peFileBuf + pFirstIID[i].FirstThunk);
 #endif
-					return (LPVOID)((firstThunkData + j)->u1.Function);
+					return (LPVOID)(firstThunkData[j].u1.Function);
+
 				}
 			}
 		}

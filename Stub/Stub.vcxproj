@@ -174,12 +174,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ApiInit.cpp" />
     <ClCompile Include="basic.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pe.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\Public\StubInfo_Public.h" />
+    <ClInclude Include="ApiInit.h" />
     <ClInclude Include="basic.h" />
     <ClInclude Include="pe.h" />
   </ItemGroup>
