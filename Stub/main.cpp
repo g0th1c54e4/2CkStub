@@ -54,7 +54,7 @@ VOID WINAPI StubInit() {
 		RepairReloc((LPVOID)imageBase, share_info.Reloc.RvaAddr, share_info.OldImageBase, imageBase);
 	}
 
-	//TODO:修正IAT表(需要Write权限)
+	//修正IAT表(需要Write权限)
 	if (share_info.Import.RvaAddr != 0 && share_info.Iat.RvaAddr != 0) {
 		RepairIat((LPVOID)imageBase, &share_info.Import, &share_info.Iat);
 	}
@@ -69,15 +69,15 @@ VOID WINAPI CallEntry() {
 
 	fnMessageBoxW(NULL, L"Welcome to Ck2Stub.\nBy LingMo", L"Ck2Stub:", MB_OK);
 
-
 }
 
 #ifndef _WIN64
 _declspec(naked)
 VOID WINAPI StubEntry() {
 	StubInit();
+	CallEntry();
 	_asm {
-		jmp dword ptr ds:[share_info.OriginEntryPoint] //需要基址
+		jmp dword ptr ds:[share_info.OriginEntryPoint]
 	}
 }
 #endif

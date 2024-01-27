@@ -27,7 +27,7 @@ LPVOID WINAPI GetExportFunc(LPVOID peFileBuf, CHAR* targetFuncName){
 	return 0;
 }
 
-LPVOID WINAPI GetExportFunc(LPVOID peFileBuf, WORD FuncOrdinal){
+LPVOID WINAPI GetExportFunc(LPVOID peFileBuf, WORD FuncOrdinal){ //未写完
 	return LPVOID();
 }
 
@@ -118,8 +118,62 @@ VOID WINAPI RepairReloc(LPVOID peFileBuf, DWORD relocBaseRvaAddr, DWORD oldImage
 
 #endif
 
-
+extern _GetProcAddress fnGetProcAddress;
 VOID WINAPI RepairIat(LPVOID peFileBuf, AREA* importInfo, AREA* iatInfo) {
+	PIMAGE_IMPORT_DESCRIPTOR pImpDesc = (PIMAGE_IMPORT_DESCRIPTOR)((LPBYTE)peFileBuf + importInfo->RvaAddr); //TODO:需要使用循环遍历每一个模块
+	while (pImpDesc->FirstThunk != 0) {
+		CHAR* moduleName = (CHAR*)((LPBYTE)peFileBuf + pImpDesc->Name);
 
-	return VOID();
+		PIMAGE_THUNK_DATA FTs = (PIMAGE_THUNK_DATA)((LPBYTE)peFileBuf + pImpDesc->FirstThunk);
+		PIMAGE_THUNK_DATA OFTs = (PIMAGE_THUNK_DATA)((LPBYTE)peFileBuf + pImpDesc->OriginalFirstThunk);
+		if (pImpDesc->OriginalFirstThunk == 0) { //Fixed
+			OFTs = FTs;
+		}
+		while (OFTs->u1.AddressOfData != 0) {
+			if ((OFTs->u1.Ordinal & IMAGE_ORDINAL_FLAG) != 0) {
+				//序号导出
+				WORD orderNum = IMAGE_ORDINAL(OFTs->u1.Ordinal);
+				//LPVOID fnAddr = GetExportFunc(GetModuleBase(moduleName), orderNum); //针对序号的GetExportFunc尚未完成
+				LPVOID fnAddr = fnGetProcAddress((HMODULE)GetModuleBase(moduleName), (CHAR*)orderNum);
+				if (fnAddr != 0) {
+#ifdef _WIN64
+					FTs->u1.Function = (ULONGLONG)fnAddr;
+#else
+					FTs->u1.Function = (ULONG)fnAddr;
+#endif
+				}
+
+			}
+			else {
+				//符号导出
+				PIMAGE_IMPORT_BY_NAME pImpByName = (PIMAGE_IMPORT_BY_NAME)((LPBYTE)peFileBuf + OFTs->u1.AddressOfData);
+				CHAR* funcName = (CHAR*)((LPBYTE)pImpByName + sizeof(WORD));
+
+				//LPVOID fnAddr = GetExportFunc(GetModuleBase(moduleName), funcName); //有问题
+				LPVOID fnAddr = fnGetProcAddress((HMODULE)GetModuleBase(moduleName), funcName);
+				if (fnAddr != 0) {
+#ifdef _WIN64
+					FTs->u1.Function = (ULONGLONG)fnAddr;
+#else
+					FTs->u1.Function = (ULONG)fnAddr;
+#endif
+				}
+			}
+
+			OFTs++;
+			FTs++;
+		}
+		pImpDesc++;
+	}
+}
+
+extern _GetModuleHandleA fnGetModuleHandleA;
+extern _LoadLibraryA fnLoadLibraryA;
+
+LPVOID WINAPI GetModuleBase(LPCSTR moduleName) {
+	LPVOID moduleBase = fnGetModuleHandleA(moduleName);
+	if (moduleBase == NULL) {
+		return fnLoadLibraryA(moduleName);
+	}
+	return moduleBase;
 }

@@ -108,6 +108,7 @@ namespace Ck2Stub {
 		east_impDesc_sec_kernel32.DllName = "kernel32.dll";
 		east_impDesc_sec_kernel32.FunctionNames.push_back("LoadLibraryA");
 		east_impDesc_sec_kernel32.FunctionNames.push_back("GetModuleHandleA");
+		east_impDesc_sec_kernel32.FunctionNames.push_back("GetProcAddress");
 		easy_impDesc_secArr.push_back(east_impDesc_sec_kernel32);
 
 		LocalBuf importBuf;
@@ -125,6 +126,7 @@ namespace Ck2Stub {
 		share_info->Iat.Size = iatDir->Size;
 		share_info->Import.RvaAddr = impDir->VirtualAddress;
 		share_info->Import.Size = impDir->Size;
+		
 		iatDir->VirtualAddress = iatRva;
 		iatDir->Size = iatSize;
 		impDir->VirtualAddress = impRva;

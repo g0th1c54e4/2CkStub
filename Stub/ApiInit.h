@@ -9,6 +9,7 @@ typedef BOOL(WINAPI* _VirtualProtect)(LPVOID lpAddress, SIZE_T dwSize, DWORD flN
 typedef HMODULE (WINAPI* _LoadLibraryA)(LPCSTR lpLibFileName);
 typedef HMODULE(WINAPI* _GetModuleHandleA)(LPCSTR lpModuleName);
 typedef VOID (WINAPI* _ExitProcess)(UINT uExitCode);
+typedef LPVOID(WINAPI* _GetProcAddress)(HMODULE hModule, LPCSTR lpProcName);
 //--------------------------------------------------------------------------
 //typedef LPVOID(WINAPI* GETPROCADDRESS)(HANDLE, LPCSTR);
 //typedef HANDLE(WINAPI* LOADLIBRARYA)(LPCSTR);
@@ -63,4 +64,10 @@ typedef VOID (WINAPI* _ExitProcess)(UINT uExitCode);
 VOID WINAPI ApiInit(LPVOID imageBase);
 LPVOID WINAPI GetModuleBase(LPCSTR moduleName);
 
+
+#ifdef _WIN64
+DWORD64 WINAPI GetKernelBase();
+#else
+DWORD WINAPI GetKernelBase();
+#endif
 #endif

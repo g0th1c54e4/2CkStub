@@ -4,6 +4,7 @@
 #include <Windows.h>
 
 BOOL WINAPI StringCmp(LPCSTR lpStr1, LPCSTR lpStr2);
+DWORD WINAPI StringLen(LPCSTR lpStr);
 
 
 #endif
