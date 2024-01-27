@@ -1,11 +1,10 @@
 #include "ApiInit.h"
 
-
-_MessageBoxW  fnMessageBoxW;
-_VirtualProtect fnVirtualProtect;
-_LoadLibraryA fnLoadLibraryA;
-_GetModuleHandleA fnGetModuleHandleA;
-_ExitProcess fnExitProcess;
+_MessageBoxW  fnMessageBoxW = NULL;
+_VirtualProtect fnVirtualProtect = NULL;
+_LoadLibraryA fnLoadLibraryA = NULL;
+_GetModuleHandleA fnGetModuleHandleA = NULL;
+_ExitProcess fnExitProcess = NULL;
 
 LPVOID Base_Kernel32 = 0;
 LPVOID Base_User32 = 0;
@@ -20,6 +19,7 @@ VOID WINAPI ApiInit(LPVOID imageBase) {
 
 	fnMessageBoxW = (_MessageBoxW)GetExportFunc(Base_User32, (CHAR*)"MessageBoxW");
 	fnExitProcess = (_ExitProcess)GetExportFunc(Base_Kernel32, (CHAR*)"ExitProcess");
+	fnVirtualProtect = (_VirtualProtect)GetExportFunc(Base_Kernel32, (CHAR*)"VirtualProtect");
 }
 
 LPVOID WINAPI GetModuleBase(LPCSTR moduleName) {

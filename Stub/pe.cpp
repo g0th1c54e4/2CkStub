@@ -27,6 +27,10 @@ LPVOID WINAPI GetExportFunc(LPVOID peFileBuf, CHAR* targetFuncName){
 	return 0;
 }
 
+LPVOID WINAPI GetExportFunc(LPVOID peFileBuf, WORD FuncOrdinal){
+	return LPVOID();
+}
+
 LPVOID WINAPI GetImportFunc(LPVOID peFileBuf, CHAR* LibraryName, CHAR* FuncName) {
 	PIMAGE_DOS_HEADER pDos = (PIMAGE_DOS_HEADER)peFileBuf;
 #ifdef _WIN64
@@ -111,6 +115,11 @@ VOID WINAPI RepairReloc(LPVOID peFileBuf, DWORD relocBaseRvaAddr, DWORD oldImage
 		pReloc = (PIMAGE_BASE_RELOCATION)((PBYTE)pReloc + pReloc->SizeOfBlock);
 	}
 }
+
 #endif
 
 
+VOID WINAPI RepairIat(LPVOID peFileBuf, AREA* importInfo, AREA* iatInfo) {
+
+	return VOID();
+}

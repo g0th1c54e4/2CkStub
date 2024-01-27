@@ -62,6 +62,7 @@ FileBit _PeFile::init_judgeBit(){  // 1 ==> 64Bit、0 ==> 32Bit
 }
 
 BOOL _PeFile::CheckSecTabSpace(UINT numOfInsertSec){
+	//TODO: 每个节表占40字节 要保证有80字节空白区(多余40字节用于兼容部分系统)
 	if (numOfInsertSec <= 0) {
 		return FALSE;
 	}

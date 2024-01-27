@@ -38,7 +38,6 @@ namespace Ck2Stub {
 			memset(loadConfigMemAddr, 0, loadConfigDir->Size);
 			loadConfigDir->VirtualAddress = 0;
 			loadConfigDir->Size = 0;
-
 			cout << "[+] 已关闭SafeSEH保护。" << endl;
 		}
 		targetFile.RemoveDosStub();

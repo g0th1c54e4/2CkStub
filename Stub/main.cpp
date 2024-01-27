@@ -7,10 +7,12 @@
 extern "C" {
 	SHARE_INFO share_info = { 0 };
 	VOID WINAPI StubInit();
+	VOID WINAPI CallEntry();
 }
 #else
 SHARE_INFO share_info = { 0 };
 VOID WINAPI StubInit();
+VOID WINAPI CallEntry();
 #endif
 
 #ifdef _WIN64
@@ -20,6 +22,7 @@ DWORD imageBase = 0;
 #endif
 
 extern _MessageBoxW fnMessageBoxW;
+extern _VirtualProtect fnVirtualProtect;
 
 
 VOID WINAPI StubInit() {
@@ -31,12 +34,20 @@ VOID WINAPI StubInit() {
 	#endif
 	share_info.OriginEntryPoint += imageBase;
 
-	//TODO:初始化API函数 (利用IAT的GetProcAddress和LoadLibraryA来获取函数地址，以及用VirtualProtect打开权限)
+	//初始化API函数
 	ApiInit((LPVOID)imageBase);
-	fnMessageBoxW(NULL, L"Welcome to Ck2Stub.\nBy LingMo", L"Ck2Stub:", MB_OK);
 
+	//修正权限 ==> Read、Write、Execute
+	PIMAGE_DOS_HEADER pDos = (PIMAGE_DOS_HEADER)(imageBase);
+	PIMAGE_NT_HEADERS pNt = (PIMAGE_NT_HEADERS)(imageBase + pDos->e_lfanew);
+	WORD numOfSec = pNt->FileHeader.NumberOfSections;
+	PIMAGE_SECTION_HEADER pFirstSecHdr = IMAGE_FIRST_SECTION(pNt);
+	PIMAGE_SECTION_HEADER pLastSecHdr = (pFirstSecHdr + (numOfSec - 1));
+	DWORD oldProtVal = 0;
+	fnVirtualProtect((LPVOID)(imageBase + pFirstSecHdr->VirtualAddress), (pLastSecHdr->VirtualAddress + pLastSecHdr->Misc.VirtualSize - pFirstSecHdr->VirtualAddress), PAGE_EXECUTE_READWRITE, &oldProtVal);
 
 	//TODO:恢复原始区块数据(需要Write权限)
+
 
 	//修正重定位表(需要Write权限)
 	if (share_info.Reloc.RvaAddr != 0) {
@@ -44,10 +55,20 @@ VOID WINAPI StubInit() {
 	}
 
 	//TODO:修正IAT表(需要Write权限)
+	if (share_info.Import.RvaAddr != 0 && share_info.Iat.RvaAddr != 0) {
+		RepairIat((LPVOID)imageBase, &share_info.Import, &share_info.Iat);
+	}
 
 	//TODO:处理TLS
 
 	//TODO:恢复资源(需要Write权限)
+
+}
+
+VOID WINAPI CallEntry() {
+
+	fnMessageBoxW(NULL, L"Welcome to Ck2Stub.\nBy LingMo", L"Ck2Stub:", MB_OK);
+
 
 }
 

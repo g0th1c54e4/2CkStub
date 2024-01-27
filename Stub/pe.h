@@ -2,6 +2,7 @@
 #define _2CKSTUB_STUB_PE_H_
 
 #include <Windows.h>
+#include "../Public/StubInfo_Public.h"
 
 typedef struct _Type_Offset {
 	WORD offset : 12;
@@ -9,6 +10,7 @@ typedef struct _Type_Offset {
 }Type_Offset;
 
 LPVOID WINAPI GetExportFunc(LPVOID peFileBuf, CHAR* FuncName); //获取导出函数地址(VA)
+LPVOID WINAPI GetExportFunc(LPVOID peFileBuf, WORD FuncOrdinal); //获取导出函数地址(VA)
 LPVOID WINAPI GetImportFunc(LPVOID peFileBuf, CHAR* LibraryName, CHAR* FuncName); //获取指定模块的导入函数地址(VA)
 
 
@@ -18,6 +20,6 @@ VOID WINAPI RepairReloc(LPVOID peFileBuf, DWORD relocBaseRvaAddr, DWORD64 oldIma
 VOID WINAPI RepairReloc(LPVOID peFileBuf, DWORD relocBaseRvaAddr, DWORD oldImageBase, DWORD newImageBase); //修复重定位
 #endif
 
-
+VOID WINAPI RepairIat(LPVOID peFileBuf, AREA* importInfo, AREA* iatInfo); //修复IAT表
 
 #endif
