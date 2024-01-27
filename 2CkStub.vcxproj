@@ -80,12 +80,12 @@
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\90965\source\repos\2CkStub\capstone\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\90965\source\repos\2CkStub\capstone\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\90965\source\repos\2CkStub\aPLib\x64\include;C:\Users\90965\source\repos\2CkStub\capstone\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\90965\source\repos\2CkStub\aPLib\x64\lib;C:\Users\90965\source\repos\2CkStub\capstone\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Users\90965\source\repos\2CkStub\capstone\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\90965\source\repos\2CkStub\capstone\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\90965\source\repos\2CkStub\aPLib\x64\include;C:\Users\90965\source\repos\2CkStub\capstone\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\90965\source\repos\2CkStub\aPLib\x64\lib;C:\Users\90965\source\repos\2CkStub\capstone\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

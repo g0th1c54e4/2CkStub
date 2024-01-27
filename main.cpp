@@ -10,6 +10,9 @@
 #include <capstone/capstone.h>
 #pragma comment (lib, "capstone.lib")
 
+#pragma comment (lib, "aplib.lib")
+
+
 using namespace std;
 
 int main() {
@@ -38,7 +41,8 @@ int main() {
 		return 0;
 	}
 
-	if (Ck2Stub::Pack(targetFilePath, stubFilePath, strcat(saveFilePath, PathFindExtensionA(targetFilePath))) == TRUE) {
+	cout << "[#] 保存路径: " << strcat(saveFilePath, PathFindExtensionA(targetFilePath)) << endl;
+	if (Ck2Stub::Pack(targetFilePath, stubFilePath, saveFilePath) == TRUE) {
 		cout << "[+] 加壳成功。";
 	}
 	else {

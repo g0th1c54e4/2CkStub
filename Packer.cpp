@@ -70,6 +70,8 @@ namespace Ck2Stub {
 		//ResourcePack(&targetFile, &stubFile, &share_info);
 		//cout << "[+] 已处理资源表信息。" << endl;
 		
+		CodeProtectPack(&targetFile, &stubFile, &share_info); //调用位置仍然有待确定
+		cout << "[+] 已压缩并加密原始区块信息。" << endl;
 
 		LPVOID shareInfoAddr = (LPVOID)((DWORD64)targetFile.bufAddr + targetFile.Rva2Foa(newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile)));//本地PE文件的share_info的对应地址
 		share_info.ImageBaseOffset = newCodeSec.VirtualAddress + GetStubShareInfoOffset(&stubFile);
@@ -187,7 +189,7 @@ namespace Ck2Stub {
 
 	VOID CodeProtectPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
 		//采用和vmp一样的做法，将区块头的raw信息删除掉，之后再将原区块的数据解密后再写回到原来的区块区域内
-
+		
 
 	}
 
@@ -211,7 +213,7 @@ namespace Ck2Stub {
 		DWORD offset = stubFile->GetOep() - secCode->VirtualAddress;
 		return offset;
 	}
-
+	
 	DWORD WINAPI GetStubShareInfoOffset(PeFile* stubFile){
 		DWORD funcExportRva = stubFile->GetExportFuncAddrRVA((CHAR*)SHARE_INFO_NAME);
 		return (funcExportRva - stubFile->GetCodeSec()->VirtualAddress);

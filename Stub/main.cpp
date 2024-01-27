@@ -46,22 +46,22 @@ VOID WINAPI StubInit() {
 	DWORD oldProtVal = 0;
 	fnVirtualProtect((LPVOID)(imageBase + pFirstSecHdr->VirtualAddress), (pLastSecHdr->VirtualAddress + pLastSecHdr->Misc.VirtualSize - pFirstSecHdr->VirtualAddress), PAGE_EXECUTE_READWRITE, &oldProtVal);
 
-	//TODO:恢复原始区块数据(需要Write权限)
+	//TODO:恢复原始区块数据
 
 
-	//修正重定位表(需要Write权限)
+	//修正重定位表
 	if (share_info.Reloc.RvaAddr != 0) {
 		RepairReloc((LPVOID)imageBase, share_info.Reloc.RvaAddr, share_info.OldImageBase, imageBase);
 	}
 
-	//修正IAT表(需要Write权限)
+	//修正IAT表
 	if (share_info.Import.RvaAddr != 0 && share_info.Iat.RvaAddr != 0) {
 		RepairIat((LPVOID)imageBase, &share_info.Import, &share_info.Iat);
 	}
 
 	//TODO:处理TLS
 
-	//TODO:恢复资源(需要Write权限)
+	//TODO:恢复资源
 
 }
 

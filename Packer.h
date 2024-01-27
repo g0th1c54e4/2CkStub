@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include "pe.h"
 #include "Public\StubInfo_Public.h"
+#include <aplib.h>
 
 #define CODE_SECTION_NAME "CK0"
 #define CODEINFO_SECTION_NAME "CK1"
