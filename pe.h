@@ -147,6 +147,8 @@ public:
 	DWORD RelocInfo2Buf(std::vector<Base_reloc_sec>* inRelocInfo, LocalBuf* outRelocInfoBuf); //将重定位信息数组转换成重定位表数据。返回Buffer的大小(outRelocInfoBuf必须是未初始化的状态)
 	VOID RepairReloc(DWORD relocBaseFoaAddr, DWORD diffValue); //修复重定位
 
+	VOID UpdateSecHdrRawInfo(); //更新所有区块的RawOffset和RawSize
+
 	VOID ClosePeFile();
 	_PeFile();
 	~_PeFile();

@@ -61,8 +61,8 @@ namespace Ck2Stub {
 		RelocPack(&targetFile, &stubFile, &share_info);
 		cout << "[+] 已处理重定位信息。" << endl;
 		
-		//TlsPack(&targetFile, &stubFile, &share_info);
-		//cout << "[+] 已处理TLS回调信息。" << endl;
+		TlsPack(&targetFile, &stubFile, &share_info);
+		cout << "[+] 已处理TLS回调信息。" << endl;
 		IatPack(&targetFile, &stubFile, &share_info);
 		cout << "[+] 已处理IAT表信息。" << endl;
 		//BoundImportPack(&targetFile, &stubFile, &share_info);
@@ -95,7 +95,14 @@ namespace Ck2Stub {
 	}
 
 	VOID TlsPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
-		
+		PIMAGE_DATA_DIRECTORY tlsDataDir = targetFile->GetDirByOrder(Dir_Tls);
+		if (tlsDataDir->VirtualAddress != 0) {
+
+
+
+			//tlsDataDir->VirtualAddress = 0;
+			//tlsDataDir->Size = 0;
+		}
 	}
 
 	VOID IatPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
@@ -188,8 +195,32 @@ namespace Ck2Stub {
 	}
 
 	VOID CodeProtectPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
+		return;
 		//采用和vmp一样的做法，将区块头的raw信息删除掉，之后再将原区块的数据解密后再写回到原来的区块区域内
+		//https://bbs.kanxue.com/thread-264023.htm#msg_header_h2_0
 		
+		PIMAGE_SECTION_HEADER targetCodeSecHdr =  targetFile->GetCodeSec();
+
+		BYTE* targetCodeAddr = (BYTE*)((DWORD64)targetFile->bufAddr + targetCodeSecHdr->PointerToRawData);
+		DWORD taretCodeSize = targetCodeSecHdr->Misc.VirtualSize;
+
+		LocalBuf apLibWorkSpace;
+		apLibWorkSpace.CreateBuffer(aP_workmem_size(taretCodeSize));
+		LocalBuf packData;
+		packData.CreateBuffer(aP_max_packed_size(taretCodeSize));
+		DWORD packSize = aPsafe_pack(targetCodeAddr, packData.bufAddr, taretCodeSize, apLibWorkSpace.bufAddr, NULL, NULL); //压缩后的大小
+		
+		DWORD newSecFoa = 0, newSecRva = 0;
+		targetFile->ExtendLastSection(packSize, NULL, &newSecFoa, &newSecRva);
+		targetCodeSecHdr = targetFile->GetCodeSec();
+
+		RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newSecFoa), packData.bufAddr, packSize);
+
+		packData.FreeBuffer();
+		apLibWorkSpace.FreeBuffer();
+
+		share_info->OriginCode.RvaAddr = targetCodeSecHdr->VirtualAddress;
+		share_info->OriginCode.Size = targetCodeSecHdr->Misc.VirtualSize;
 
 	}
 

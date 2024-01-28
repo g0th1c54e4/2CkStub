@@ -27,6 +27,9 @@ typedef struct _SHARE_INFO {
 	AREA Import;
 	AREA Iat;
 
+	//‘≠≥Ã–ÚTLS±Ì
+	AREA Tls;
+
 }SHARE_INFO;
 
 #endif

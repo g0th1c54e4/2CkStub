@@ -713,6 +713,12 @@ VOID _PeFile::RepairReloc(DWORD relocBaseFoaAddr, DWORD diffValue){
 	}
 }
 
+VOID _PeFile::UpdateSecHdrRawInfo(){
+	UINT numOfSec = this->ntHdr32->FileHeader.NumberOfSections;
+
+	
+}
+
 VOID _PeFile::ClosePeFile(){
 	dosHdr = 0;
 	ntHdr32 = 0;

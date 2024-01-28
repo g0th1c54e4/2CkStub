@@ -48,6 +48,11 @@ VOID WINAPI StubInit() {
 
 	//TODO:恢复原始区块数据
 
+	//BYTE* codePoint = (BYTE*)(imageBase + share_info.OriginCode.RvaAddr);
+	//for (UINT i = 0; i < share_info.OriginCode.Size; i++) {
+	//	*(codePoint + i) ^= 0x55;
+	//}
+
 
 	//修正重定位表
 	if (share_info.Reloc.RvaAddr != 0) {
@@ -59,7 +64,8 @@ VOID WINAPI StubInit() {
 		RepairIat((LPVOID)imageBase, &share_info.Import, &share_info.Iat);
 	}
 
-	//TODO:处理TLS
+	//TODO:处理TLS   Tls也分32位和64位
+
 
 	//TODO:恢复资源
 
