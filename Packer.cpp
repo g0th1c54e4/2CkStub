@@ -98,7 +98,55 @@ namespace Ck2Stub {
 		PIMAGE_DATA_DIRECTORY tlsDataDir = targetFile->GetDirByOrder(Dir_Tls);
 		if (tlsDataDir->VirtualAddress != 0) {
 
+			if (targetFile->fileBit == Bit32) {
+				PIMAGE_TLS_DIRECTORY32 tlsDir = (PIMAGE_TLS_DIRECTORY32)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(tlsDataDir->VirtualAddress));
+				DWORD rawSize = tlsDir->EndAddressOfRawData - tlsDir->StartAddressOfRawData;
+				
+				//以下代码有待持续更新(更新完毕后请删除此段注释)
+				DWORD tlsDataSecFoa = 0, tlsDataSecRva = 0;
+				targetFile->ExtendLastSection(rawSize, NULL, &tlsDataSecFoa, &tlsDataSecRva);
 
+				tlsDir = (PIMAGE_TLS_DIRECTORY32)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(tlsDataDir->VirtualAddress));
+				LPVOID StartRawAddr = (LPVOID)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa((tlsDir->StartAddressOfRawData - (DWORD)targetFile->GetImageBase())));
+				
+
+				RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + tlsDataSecFoa), StartRawAddr, rawSize); //复制TLS数据块到壳区块内
+				RtlZeroMemory(StartRawAddr, rawSize); //清除原TLS数据块
+
+				//tlsDir->StartAddressOfRawData = (DWORD)targetFile->GetImageBase() + tlsDataSecRva;
+				//tlsDir->EndAddressOfRawData = tlsDir->StartAddressOfRawData + rawSize;      //TlsDir需要在PE文件中重新构造
+
+				DWORD tlsIndexSecFoa = 0, tlsIndexSecRva = 0;
+				targetFile->ExtendLastSection(sizeof(tlsDir->AddressOfIndex), NULL, &tlsIndexSecFoa, &tlsIndexSecRva);
+				tlsDir = (PIMAGE_TLS_DIRECTORY32)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(tlsDataDir->VirtualAddress));
+				LPVOID tlsIndexAddr = (LPVOID)(((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(tlsDir->AddressOfIndex - (DWORD)targetFile->GetImageBase())));
+				DWORD tlsIndexVal = *(DWORD*)tlsIndexAddr;
+				RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + tlsIndexSecFoa), &tlsIndexVal, sizeof(tlsDir->AddressOfIndex));
+				RtlZeroMemory(tlsIndexAddr, sizeof(tlsDir->AddressOfIndex));
+
+				//tlsDir->AddressOfIndex = (DWORD)targetFile->GetImageBase() + tlsDataSecRva;
+
+				DWORD* tlsCallBackFuncArr = (DWORD*)(((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(tlsDir->AddressOfCallBacks - (DWORD)targetFile->GetImageBase())));
+				
+
+				while (*tlsCallBackFuncArr != 0) {
+
+
+
+					tlsCallBackFuncArr++;
+				}
+
+
+			}
+			if (targetFile->fileBit == Bit64) {
+				PIMAGE_TLS_DIRECTORY64 tlsDir = (PIMAGE_TLS_DIRECTORY64)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(tlsDataDir->VirtualAddress));
+				LPVOID StartRawAddr = (LPVOID)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa((tlsDir->StartAddressOfRawData - (DWORD64)targetFile->GetImageBase())));
+				DWORD rawSize = tlsDir->EndAddressOfRawData - tlsDir->StartAddressOfRawData;
+				DWORD tlsIndexVal = *(DWORD*)((DWORD64)targetFile->bufAddr + targetFile->Rva2Foa(tlsDir->AddressOfIndex - (DWORD64)targetFile->GetImageBase())); //tlsDir->AddressOfIndex
+
+
+			}
+			
 
 			//tlsDataDir->VirtualAddress = 0;
 			//tlsDataDir->Size = 0;
@@ -195,7 +243,6 @@ namespace Ck2Stub {
 	}
 
 	VOID CodeProtectPack(PeFile* targetFile, PeFile* stubFile, SHARE_INFO* share_info){
-		return;
 		//采用和vmp一样的做法，将区块头的raw信息删除掉，之后再将原区块的数据解密后再写回到原来的区块区域内
 		//https://bbs.kanxue.com/thread-264023.htm#msg_header_h2_0
 		
@@ -209,12 +256,18 @@ namespace Ck2Stub {
 		LocalBuf packData;
 		packData.CreateBuffer(aP_max_packed_size(taretCodeSize));
 		DWORD packSize = aPsafe_pack(targetCodeAddr, packData.bufAddr, taretCodeSize, apLibWorkSpace.bufAddr, NULL, NULL); //压缩后的大小
+		if (packSize == APLIB_ERROR) {
+			cout << "[-] 压缩失败" << endl;
+		}
 		
-		DWORD newSecFoa = 0, newSecRva = 0;
-		targetFile->ExtendLastSection(packSize, NULL, &newSecFoa, &newSecRva);
-		targetCodeSecHdr = targetFile->GetCodeSec();
 
-		RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newSecFoa), packData.bufAddr, packSize);
+
+
+		//DWORD newSecFoa = 0, newSecRva = 0;
+		//targetFile->ExtendLastSection(packSize, NULL, &newSecFoa, &newSecRva);
+		//targetCodeSecHdr = targetFile->GetCodeSec();
+		//
+		//RtlCopyMemory((LPVOID)((DWORD64)targetFile->bufAddr + newSecFoa), packData.bufAddr, packSize);
 
 		packData.FreeBuffer();
 		apLibWorkSpace.FreeBuffer();

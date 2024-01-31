@@ -53,6 +53,14 @@ VOID WINAPI StubInit() {
 	//	*(codePoint + i) ^= 0x55;
 	//}
 
+	//DWORD unpackSize = aPsafe_get_orig_size(packData.bufAddr);
+	//
+	//LocalBuf unpackData;
+	//unpackData.CreateBuffer(aP_workmem_size(unpackSize));
+	//DWORD u = 0;
+	//aPsafe_depack(packData.bufAddr, packSize, unpackData.bufAddr, unpackSize);     //解压代码
+
+
 
 	//修正重定位表
 	if (share_info.Reloc.RvaAddr != 0) {
